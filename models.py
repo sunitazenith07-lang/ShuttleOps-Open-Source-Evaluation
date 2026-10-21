@@ -1,31 +1,6 @@
-"""Domain model for ShuttleOps."""
-from dataclasses import asdict, dataclass
-VALID_STATUSES = ["Scheduled", "Delayed", "Cancelled"]
-VALID_CATEGORIES = ["Campus Loop", "Airport", "City", "Night"]
-FIELD_NAMES = ["id", "route_name", "origin", "destination", "stops", "departure_time", "capacity", "passengers", "status", "category"]
-@dataclass
-class Trip:
-    id: int
-    route_name: str
-    origin: str
-    destination: str
-    stops: list[str]
-    departure_time: str
-    capacity: int
-    passengers: int
-    status: str
-    category: str
-    @property
-    def name(self): return str(self.route_name)
-    @property
-    def searchable_text(self):
-        return " ".join(str(getattr(self, f, "")) for f in ["route_name", "origin", "destination", "stops", "category"])
-    def to_dict(self): return asdict(self)
-    def validate(self): return None
-    @classmethod
-    def from_dict(cls, row):
-        if not isinstance(row, dict): raise ValueError("Each record must be a JSON object")
-        missing = set(FIELD_NAMES).difference(row)
-        if missing: raise ValueError("Missing fields: " + ", ".join(sorted(missing)))
-        return cls(**{key: row[key] for key in FIELD_NAMES})
-RECORD_CLASS = Trip
+def new_partner(partner_id, zone, capacity=2):
+    return {'partner_id':partner_id,'zone':zone,'active':True,'capacity':capacity,'active_order_ids':[],'workload_minutes':0,'minutes_by_order':{},'processed_cancellation_ids':[]}
+
+
+def new_order(order_id, restaurant_id, destination_zone, prep_minutes=10):
+    return {'order_id':order_id,'restaurant_id':restaurant_id,'destination_zone':destination_zone,'prep_minutes':prep_minutes}
