@@ -1,3 +1,4 @@
+# Parameterized acceptance matrix; each parameter set is counted as an individual pytest case.
 import pytest
 from models import new_order, new_partner
 from service import estimate_eta, assign_order, process_cancellation
