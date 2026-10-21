@@ -13,6 +13,7 @@ def estimate_eta(order, partner, travel, now=0):
 def assign_order(order, partners, travel, now=0):
     options=[]
     for partner in partners:
+        # Starter is intentionally incomplete: active/capacity/time validation is missing.
         estimate=estimate_eta(order,partner,travel,now)
         if estimate['eligible']:
             options.append(estimate)
@@ -24,7 +25,7 @@ def assign_order(order, partners, travel, now=0):
 
 def process_cancellation(partner, order_id, event_id):
     out=deepcopy(partner); out.setdefault('active_order_ids',[]); out.setdefault('processed_cancellation_ids',[])
-    # Intentional starter defect: duplicate event IDs are not checked yet.
+    # Starter defect: event_id is recorded but not checked before applying the event.
     if order_id in out['active_order_ids']:
         out['active_order_ids'].remove(order_id)
         out['workload_minutes']=max(0,out.get('workload_minutes',0)-out.get('minutes_by_order',{}).get(order_id,0))
