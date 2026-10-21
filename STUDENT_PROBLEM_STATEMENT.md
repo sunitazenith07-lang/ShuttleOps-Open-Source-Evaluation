@@ -1,46 +1,35 @@
-# ShuttleOps: Campus Shuttle Route and Seat Management
+# SmartDispatch: Delivery Partner Assignment & ETA Engine
 
-**Zenith School of AI | Open-Source Evaluation | Python 3.10+ | JSON | GitHub**
+**Individual 24-hour challenge | Python 3.10+ | Synthetic data only**
 
-## Challenge
-ShuttleOps tracks campus routes, origins and destinations, intermediate stops, departures, passenger counts, capacity and trip status. Understand the starter, fix three organiser issue tickets announced at kick-off, improve search and filters, implement one operations feature and explain your decisions. Extend the existing code rather than rebuilding it.
+## Scenario
+A food-delivery service must assign orders to eligible delivery partners. Workload, availability, restaurant preparation time and travel-time estimates affect the delivery ETA. This challenge is inspired by common logistics problems; it is not any company's internal software.
 
-## Start-up
-```bash
-python -m pip install -r requirements-dev.txt
-python -m pytest -q
-python -m main
-```
-Read README.md, models.py, service.py, fixtures.py, data/ and tests/test_contract.py. Create ARCHITECTURE.md with a project map, data model, numbered data flow, storage design, simple diagram and three improvements grounded in code.
+## Required behaviour
+1. Validate order IDs, restaurant/destination zones and non-negative preparation times.
+2. Only select active partners who are eligible for the destination and below capacity.
+3. Calculate pickup time as current time + partner-to-restaurant travel + remaining workload. Calculate delivery ETA as pickup time + restaurant preparation + restaurant-to-customer travel.
+4. Select the lowest ETA; break ties by partner ID ascending.
+5. Never treat missing travel data as zero. Return an unassigned result and a reason if no partner can be selected.
+6. Process cancellations idempotently so duplicate cancellation events do not release capacity twice.
+7. Handle empty input, invalid fields, unknown IDs and negative travel/preparation times safely.
 
-## Mandatory work
-1. Reproduce and fix the three issue tickets released by organisers; add a regression test for each.
-2. Implement case-insensitive search that trims surrounding spaces; combine text, category and status filters and handle invalid filters, no matches and empty data safely.
-3. Complete at least one feature:
-   - Seat availability view that reports remaining seats for each active trip.
-   - Route discovery filtering by origin, destination, and stops, combined with trip status/category.
-   - Delay report that records an explanation for affected trips without overwriting the planned departure time.
-4. Add tests, document at least five scenarios in TESTING.md and update README.md/PROJECT_NOTES.md.
-5. Use focused branches and pull requests. Do not delete, skip, weaken or bypass tests.
+## Kick-off issue tickets
+At kick-off, organisers will share three concrete issue tickets. Reproduce each, explain the cause, fix it and add a regression test. Example defect classes include selecting an inactive partner, missing travel data, and duplicate cancellation handling.
 
-## Test suite
-The public suite contains 110 visible cases. The untouched starter should begin with 86 passing and 24 failing because of deliberate defects. The final evaluation adds 90 private checks, making 200 cases in total. Private evaluator material is not included here.
+## Deliverables
+Open a pull request to the original repository and do not merge it. Include regression tests and DISPATCH_NOTES.md with one ETA calculation, a no-eligible-partner example, three edge cases, assumptions and limitations. Choose at most one optional enhancement: batch assignment, candidate-explanation output, or ETA recalculation after a preparation-time change.
 
-## Contribution workflow and submission
-Use fix/issue-<number>-<summary> for fixes and feature/<short-name> for features. Pull requests should include root cause, summary, tests run and known limitations.
+## Setup and CI
+Run python -m pip install -r requirements-dev.txt, then python -m pytest -q, and python -m main. Some starter tests may fail intentionally; the final starter baseline must be checked by organisers, so no exact test count is promised. GitHub Actions should run on pushes and pull-request updates. Do not remove/skip/weaken tests or edit CI to evade failures.
 
-Submit repository/fork and PR links, README.md, ARCHITECTURE.md, TESTING.md, PROJECT_NOTES.md, a summary of fixes and features, and a two-minute demo. If AI tools are used, fill AI_USAGE.md: tool/model, purpose, what you verified/changed yourself, any displayed credits/tokens (or “not available”), and one suggestion accepted, modified or rejected with your reason. Never include secrets or private personal data. Be ready to explain and modify your code during viva.
+## Integrity
+AI chatbots, AI coding assistants, generated patches/tests and third-party solution-writing are prohibited. Normal non-AI documentation is allowed. Do not upload challenge code or data to external services. You must explain your work and make a small live change. A code walkthrough can support integrity checks; no automated detector can prove whether AI was used.
 
-## Evaluation — 100 marks
-
-| Criterion | Marks |
-|---|---:|
-| Codebase understanding | 15 |
-| Problem solving and root-cause analysis | 25 |
-| Working prototype and requested features | 20 |
-| Code quality | 10 |
-| Testing and edge cases | 10 |
-| Demo, communication and viva | 20 |
-| **Total** | **100** |
-
-All 300 students use the same rubric; the top 270 will be shortlisted by final score, subject to minimum competency criteria announced by organisers. Follow the latest official announcements for kick-off, code freeze, submission and demo timings.
+## Rubric — 100 marks
+- Codebase understanding and ETA explanation: 15
+- Assignment rules and deterministic tie-breaking: 25
+- Edge-case safety and capacity consistency: 20
+- Tests: 15
+- Code quality: 10
+- PR, written reasoning and live explanation: 15
