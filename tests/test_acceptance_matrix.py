@@ -76,7 +76,7 @@ def test_capacity_boundary_matrix(capacity,active_count):
 
 
 @pytest.mark.parametrize("x_zone,travel_x,travel_y,expected", [
-    ("X",1,2,"X"),("X",2,1,"Y"),("X",5,5,"A"),("X",0,10,"A"),
+    ("X",1,2,"A"),("X",2,1,"B"),("X",5,5,"A"),("X",0,10,"A"),
     ("X",10,0,"B"),("X",3,4,"A"),("X",4,3,"B"),("X",9,9,"A"),
     ("X",2,9,"A"),("X",9,2,"B"),("X",1,1,"A"),("X",7,8,"A"),
     ("X",8,7,"B"),("X",0,0,"A"),("X",100,100,"A"),
