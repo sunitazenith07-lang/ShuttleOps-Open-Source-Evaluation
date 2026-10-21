@@ -1,17 +1,9 @@
-# ShuttleOps — Student Starter
+# SmartDispatch — Delivery Partner Assignment & ETA Engine
 
-**Zenith School of AI | Individual Open-Source Evaluation**
+Zenith School of AI | 24-hour individual Python evaluation
 
-A Python project for campus shuttle routes, passenger capacity, stops and seat booking.
+A simulated logistics service inspired by common delivery dispatch/ETA problems. It uses synthetic data only and is not any company's internal software.
 
-## Setup
+Read STUDENT_PROBLEM_STATEMENT.md before coding. Setup: python -m pip install -r requirements-dev.txt; run tests with python -m pytest -q; run the sample with python -m main.
 
-From the repository root:
-
-```bash
-python -m pip install -r requirements-dev.txt
-python -m pytest -q
-python -m main
-```
-
-Read `STUDENT_PROBLEM_STATEMENT.md` before coding. The starter contains deliberate defects for students to investigate. Do not delete or weaken tests. Private evaluator tests are not included in this public repository.
+Fork this repository, create a focused branch, and open a pull request to the original repository. Do not merge your PR. GitHub Actions should run on pushes and pull requests; check the PR's Checks tab. Starter tests may fail where functionality is intentionally incomplete. Do not remove, skip, weaken or bypass tests.
