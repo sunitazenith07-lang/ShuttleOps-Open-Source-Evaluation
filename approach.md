@@ -1,32 +1,38 @@
 # approach.md - Required submission
 
-Complete this file in your own words. Be concise and specific to the work you actually performed.
+## 0. Student Contribution and Ownership
+- Implementation, test runs and code reviews were done with AI coding assistance under my direction, as declared in `AI_USAGE_TEMPLATE.md`. Throughout this file, "I" covers the work I directed and the decisions I made.
+- I studied the problem statement and the evaluation rubric, identified what the engine had to do, and wrote detailed instructions for the AI tools covering requirements, constraints and expected behaviour.
+- I set the order of work: investigation and baseline first, then implementation, then dataset checks, regression tests and documentation. I required that no test be weakened and no result be invented.
+- I guided the assignment logic, ETA formula, validation, partner eligibility and cancellation handling. When behaviour did not match the brief, I asked for corrections.
+- I asked for a pre-submission audit and two independent reviews by different models, rather than accepting the first implementation. I decided how each finding was handled; examples are in section 5 and in `AI_USAGE_TEMPLATE.md`.
+- I kept every GitHub action (push, pull request) behind my explicit approval and froze the code before the final documentation pass.
+- I reviewed the final code, tests and documents, asked for explanations of the parts I needed to understand, and I take responsibility for explaining and presenting this submission.
 
 ## 1. Baseline
-- Commands run before editing:
-- Initial test result (include the actual summary):
-- Demo/output observed:
+- Commands run before editing: `python -m pip install -r requirements-dev.txt`, `python -m pytest -q`, `python -m main`.
+- Initial test result (actual): **65 failed, 164 passed** (229 total) on Python 3.14.3.
+- Demo output observed: `{'order_id': 'O-7', 'partner_id': 'P-2', 'pickup_minutes': 13, 'eta_minutes': 35, 'reason': 'assigned'}`. The demo was already correct by luck — both fixture partners are eligible and P-2's ETA (35) genuinely beats P-1's (36).
 
 ## 2. Codebase understanding
-- Important files/functions inspected:
-- Candidate filtering, ETA calculation, and capacity flow traced:
-- How you confirmed your understanding:
+- Important files inspected: `service.py` (all logic), `models.py` (dict factories), `fixtures.py`/`main.py` (demo), all three test files, `data/records.json` + `data/README.txt`, both CI workflows.
+- Data flow: `assign_order(order, partners, travel, now)` loops partners → `estimate_eta` per partner → `min()` on `(eta_minutes, str(partner_id))`. `travel` is a dict keyed by `(from, to)` tuples. `process_cancellation` deep-copies the partner and releases workload.
+- Confirmation method: every failing test was mapped to the specific missing check in the starter, e.g. `test_inactive_partner_not_assigned` → `assign_order` never reads `partner['active']`; `test_duplicate_cancellation_is_idempotent_across_workloads` → `event_id` was recorded but never consulted.
 
 ## 3. Investigation and implementation strategy
-For each major defect, describe the symptom, hypothesis, evidence from a test/log/example, and the fix chosen.
-- Issue 1:
-- Issue 2:
-- Issue 3 (if applicable):
+- Issue 1 — No eligibility gate. Symptom: inactive/full-capacity partners received orders. Hypothesis confirmed by `test_inactive_partners_never_selected` (5 failures) and `test_capacity_boundary_matrix` (11 failures). Fix: `_partner_problem()` returns a rejection reason for inactive partners, invalid capacity (must be `int`, not `bool`, `>= 1`), capacity exhaustion, malformed records and invalid workload.
+- Issue 2 — No input/time validation. Symptom: negative/string/bool/NaN/inf travel times, bad `prep_minutes`, bad `now` and empty IDs produced bogus ETAs or assignments. Evidence: `test_invalid_or_missing_travel_time_rejected` (9), `test_preparation_time_validation` (8), `test_current_time_validation` (5), `test_invalid_order_fields_do_not_assign_partner` (8). Fix: `_is_valid_time()` (int/float, not bool, finite, `>= 0`; an int too large to convert to float is rejected instead of raising `OverflowError`) plus `_order_problem()` and ID checks. `estimate_eta` also rejects a computed ETA that overflows to infinity (`'ETA out of range'`).
+- Issue 3 — Cancellation not idempotent. Symptom: `event_id` was appended but never checked, so a duplicated event released workload twice. Evidence: 15 `test_duplicate_cancellation_is_idempotent_across_workloads` failures + `test_duplicate_cancellation_is_idempotent`. Fix: early return when `event_id` is already in `processed_cancellation_ids`; also remove the cancelled order from `minutes_by_order` and guard malformed fields.
 
 ## 4. Implementation decisions
-- Main changes and why:
-- Alternatives considered and why rejected:
-- Assumptions:
+- Main changes: layered validation (`_order_problem`, `_partner_problem`, `_evaluations`) feeding `estimate_eta` → `assign_order`; unassigned results now carry counted rejection reasons; cancellation dedup by `event_id`.
+- Alternatives considered: (a) raising exceptions on invalid input — rejected, the test contract expects `eligible: False`/`partner_id: None`, not crashes; (b) silently coercing bad values to valid-looking ones — explicitly forbidden by the brief; (c) treating `active` as truthy — rejected in favour of `is True` because non-bool values are malformed records.
+- Assumptions: `active` must be literally `True`; missing `active_order_ids`/`workload_minutes` default to empty/0 but present-and-malformed values reject the partner; during cancellation, a malformed `active_order_ids` or `processed_cancellation_ids` (e.g. a tuple) is left untouched and the event is skipped, because overwriting it would erase real state; a cancellation without `event_id` is deduplicated per partner (only the first ID-less event applies — conservative choice, see DISPATCH_NOTES.md).
 
 ## 5. Verification
-- Tests added or changed:
-- Commands run and actual results:
-- Edge cases verified:
-- Remaining failures or known limitations:
-
-Record actual engineering decisions and evidence. Do not claim tests or experiments you did not run.
+- Tests added: `tests/test_regression.py` (eligibility, travel validation, order/partner malformation, ETA formula, tie-break determinism, cancellation edge cases, stretch feature) and `tests/test_dataset.py` (tuple-key conversion, deterministic replay of all 180 orders, idempotent replay of all 177 cancellations).
+- Commands run and actual results: `python -m pytest -q` → **288 passed, 0 failed, 0 skipped** (was 65 failed / 164 passed): the 229 original tests plus 59 added (54 in `test_regression.py`, 5 in `test_dataset.py`). `python -m main` → same correct output as baseline. Dataset replay: 180 orders → 170 assigned / 10 unassigned with 0 mismatches against an independent checker; 177 cancellation events → 0 accounting mismatches, no negative workload, and replaying the stream a second time leaves the state unchanged.
+- Edge cases verified: the 17 documented in TESTING.md, plus the dataset replay.
+- Post-implementation audit fixes (each with a regression test that fails on the earlier code and passes now): (1) an unhashable `order_id` crashed `process_cancellation` with `TypeError` → the `minutes_by_order.pop` is now guarded; (2) a malformed `workload_minutes` such as `'20'` was silently reset to 0 during cancellation → it is now left unchanged; (3) unassigned results omitted `pickup_minutes` → every result now carries the same five keys. The contract tests do not fix the unassigned key set, so adding `pickup_minutes: None` was a compatible change.
+- Final code-audit fixes (commit `3ddc5d2`, again each with a regression test that fails on the earlier code): (4) an int too large for a float (e.g. `10**400`) made `math.isfinite()` raise `OverflowError` in `estimate_eta`, `assign_order` and `process_cancellation` → now rejected as invalid; (5) inputs of `1e308` are each finite but sum to `inf`, and that ETA was assigned → now rejected; (6) a malformed `processed_cancellation_ids` or `active_order_ids` was replaced with `[]`, which erased event history (allowing a double release) or wiped real orders → now left untouched and the event skipped. A missing or `None` list still defaults to `[]`.
+- Remaining failures: none. Known limitation: an `event_id`-less cancellation is deduplicated per partner, so a second distinct ID-less event on the same partner is ignored (documented assumption).
