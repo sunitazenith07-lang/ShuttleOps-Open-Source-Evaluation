@@ -1,23 +1,31 @@
-# challenges.md - COMPULSORY submission
+# Challenges and debugging
 
-This file is mandatory and worth 5 marks. Describe your actual experience honestly. Do not invent difficulties to fill the page.
+Actual observations from Codex's AI-assisted implementation.
 
-## 1. Challenge or confusing behaviour
-What candidate-selection, ETA, capacity, missing-data, tie-breaking, or cancellation case was difficult to understand?
+## Time types and eligibility
+The baseline had 65 failures, including negative/string/bool/NaN/infinite time cases,
+inactive partners and full capacity. Python booleans behave as numbers, so generic arithmetic
+or isinstance(value, int) was insufficient. Added exact numeric type checks and finite float
+validation, plus separate strict capacity and active checks. Existing validation matrices and
+new malformed-field regressions now pass.
 
-## 2. Evidence
-Summarize the relevant assertion, log, output, or minimal reproducible example.
+## Cancellation identity versus order identity
+A replay guard must run before releasing any order: a repeated event ID with a changed order
+payload must not release a different active order. Also, a new event ID for an already cancelled
+order must not subtract its old minutes again. The new regression starts with two active orders
+and verifies both cases, the retained workload, ledger cleanup and input immutability.
 
-## 3. What I tried
-List debugging steps or experiments you actually performed and what each one showed.
+## Missing accounting data
+The demo has workload without a complete per-order minutes ledger. Requiring a complete ledger
+for ETA would incorrectly reject the existing fixture. ETA uses aggregate workload; cancellation
+uses an available per-order deduction, retaining workload if that deduction is absent.
+Negative/malformed ledger values reject cancellation. This conservative policy is documented.
 
-## 4. Resolution
-What was the root cause? What did you change, and why did it address the cause rather than hide the symptom?
+## Numeric boundaries
+Finite input floats can still sum to infinity, and mixing huge ints with floats can overflow.
+The regression tests genuine integer arithmetic separately from invalid float conversion;
+the service checks calculation results and catches overflow before updating state.
 
-## 5. Proof and regression prevention
-Which test(s) demonstrate the fix? What related case might still break?
-
-## 6. Unresolved challenge or next step
-State remaining limitations and how you would investigate them next.
-
-If you did not encounter a major blocker, say so honestly and describe the hardest edge case you deliberately tested and what it taught you. Do not manufacture a story.
+## Remaining work and limitations
+All 274 local tests pass. Publication uses the browser signed in as @adjj07, as requested. GitHub CI is not yet observed. A concurrent real service would need
+atomic capacity reservations and a durable event registry; these are outside this offline API.
