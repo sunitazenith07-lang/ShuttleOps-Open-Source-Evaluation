@@ -1,77 +1,49 @@
+# My approach
+
 ## 1. Baseline
 
-- **Commands run before editing:** `python -m pip install -r requirements-dev.txt` `python -m pytest -q` `python -m (Python 3.14.7, local `.venv`).
+- **Commands run before editing:** `python -m pip install -r requirements-dev.txt`, `python -m pytest -q`, and `python -m main`.
+- **Initial test result:** 65 tests failed and 164 passed (229 tests total).
+- **Demo output:** The starter demo assigned order `O-7` to partner `P-2`. The pickup time was 13 minutes and the ETA was 35 minutes.
 
-- **Initial test result:** `65 failed 164 passed in 0.19s` (229 total).
+## 2. Codebase understanding
 
-- **Demo output (starter):** `{'order_id': 'O-7' 'partner_id': 'P-2' 'pickup_minutes: 13 'eta_minutes: 35 'reason': 'assigned'}`. Correct for the fixture because the fixture contains no data.
+- **Files and functions I looked at:** `service.py`, `models.py`, `fixtures.py`, `main.py`, the test files, the sample data, and the GitHub Actions test workflow.
+- **How partner choice and ETA work:** `assign_order` checks the order and then looks at each partner. It skips partners that are inactive or full. For the others, `estimate_eta` adds the travel time to the restaurant, the partner's current workload, the food preparation time, and the travel time to the destination. It picks the partner with the lowest ETA. If two ETAs match, it uses the partner ID to choose.
+- **How I checked my understanding:** I compared the code with the test expectations and looked at the sample data. The project notes record 60 partners, 180 orders, and 10 orders with a missing route to their destination.
 
-Grouping the 65 failures by test function showed they came from a handful of root causes not 65 bugs:
+## 3. Investigation and implementation strategy
 
-| Failing test group | Count | Root cause |
+### Issue 1: The code accepted bad time values
 
-|---|---|---|
+- **What happened:** Some bad values were used in the ETA calculation. Other values, like text, caused a `TypeError`.
+- **What I thought was wrong:** The code did not check values before using them in calculations.
+- **Evidence:** The recorded tests include examples where text caused an error and `True` was treated like one minute.
+- **What I changed:** I added checks so times must be valid, finite numbers that are zero or more. IDs also need to be non-empty text.
 
-test_duplicate_cancellation_is_idempotent_across_workloads` + contract twin 16 | `event_id` appended without checking `processed_cancellation_ids` |
+### Issue 2: The code could choose an inactive or full partner
 
-| `test_capacity_boundary_matrix` + `test_full_partner_not_assigned` | 12 | `capacity` / `active_order_ids` never read |
+- **What happened:** Some tests showed that partner activity and capacity were not being checked.
+- **What I thought was wrong:** The assignment code was not checking if a partner was active or had room for another order.
+- **Evidence:** The baseline had failures in the capacity and inactive-partner tests.
+- **What I changed:** Before estimating an ETA, the code checks that the partner is active, has a valid capacity, and has space available.
 
-| `test_invalid_or_missing_travel_time_rejected` | 9 | only `None` checked; `-1` `"2"` `True` NaN, inf accepted |
+### Issue 3: The same cancellation could be handled twice
 
-| `test_preparation_time_validation` + `test_negative_prep_time_is_rejected` | 9 | `prep_minutes` never validated; `None`/`"10"` raised `TypeError` |
-
-| `test_invalid_order_fields_do_not_assign_partner` | 8 | IDs never validated |
-
-| `test_inactive_partners_never_selected` + contract twin | 6 | `active` never read |
-
-| `test_current_time_validation` | 5 | `now` never validated; `"5"`/`None` raised `TypeError` |
-
-8 of the failures were `TypeError`s at `service.py:9-10` (e.g. `Unsupported operand type(s) for +: 'int' and 'str'`) i.e. Invalid input crashed instead of being rejected.
-
-## 2. Understanding
-
-- **Files inspected:** `service.py` (`estimate_eta` `assign_order` `process_cancellation`) `models.py` (`new_partner` `new_order`) `fixtures.py` `main.py` all three test files, `data/records.json` + `data/README.txt` `.github/workflows/tests.yml`.
-
-- **Flow traced:** `assign_order` loops over partners → calls `estimate_eta` per partner → keeps `results → `min` by `(eta, str(partner_id))`. `Estimate_eta` looks up `travel[(partner.zone, restaurant)]`. Travel[(restaurant destination)]` then `pickup = now + leg1 + workload` `eta = pickup + prep + leg2`. Capacity is the length of `active_order_ids` vs `capacity`; workload is `workload_minutes` with per-order minutes in `minutes_by_order` used for release on cancellation.
-
-- ** observation:** `estimate_eta` used `partner.get('workload_minutes 0)` and `order.get('prep_minutes 0)`. Silently defaulting missing values to zero, which the contract forbids for travel data and is equally unsafe for other times.
-
-- **Confirmed by:** reading the expectations in `test_acceptance_matrix.py` (e.g. The `expected_valid` formula for prep, `valid_capacity` for capacity) and checking them against the dataset (60 partners: 55 active / 5 inactive; capacities 1–4; 10 orders whose restaurant→destination route is missing).
-
-## 3.. Implementation strategy
-
-- **Issue 1. No input validation.** Symptom: invalid values produced ETAs or `TypeError`. Hypothesis: arithmetic is done on.get()` values. Evidence: `prep="10"` → `TypeError`; `leg1=True` → ETA computed as if 1 minute. Fix: a _is_minutes()` predicate (real `int`/`float` not `bool` finite, `>= 0`) applied to `now` `prep_minutes` `workload_minutes` and both travel legs; `_is_id()` (non-empty `str`) for `order_id` `restaurant_id` `destination_zone` `partner_id` `zone`.
-
-- **Issue 2. Eligibility not enforced.** Symptom: inactive and full partners selected. Fix: `partner_rejection()` checks in order: record is a dict, partner_id` `active is True` `capacity` is an `int >= 1` (not `bool`) `active_order_ids` is a list, `len(active_order_ids) < capacity`. It runs *before* `estimate_eta`.
-
-- **Issue 3. Cancellation not idempotent.** Symptom: call with the same `event_id` appended it again (`['C' 'C']`). Fix: return the copied record unchanged if `event_id` is already in `processed_cancellation_ids`.
+- **What happened:** Repeating a cancellation could add the same event ID again and affect workload more than once.
+- **What I thought was wrong:** The code did not check whether it had already seen that cancellation ID.
+- **Evidence:** The recorded duplicate-cancellation test showed the same ID more than once.
+- **What I changed:** The code now remembers cancellation IDs and ignores an ID it has already handled. It also removes the cancelled order's saved workload. Events without an ID are ignored because the program cannot tell if they are duplicates.
 
 ## 4. Implementation decisions
 
-- **Strict `active is True`.** Truthy values such as `1` or `"yes"` are rejected. The tests only require `True` → selectable and falsy → not selectable; I chose strict because `"no"` is truthy and would otherwise make a partner eligible.
-
-- **`partner_id` must be a string.** This lets the tie-break key be `(eta, partner_id)` with no `str()` coercion so ordering is plain lexicographic. Can never compare mixed types.
-
-- **Cancellation events without an `event_id` are not applied.** The dataset has 7 events. Without an ID "process once" cannot be guaranteed so they are ignored than risking double release.
-
-- **Reused `event_id` with a different payload is ignored.** The ID is the idempotency key; the first payload wins.
-
-- **On release the orders entry is also popped from `minutes_by_order`** stale minutes cannot be released later.
-
-- **`assign_order` returns a `rejected` list** (`partner_id` + reason per rejected candidate) and a reason summary, so an unassigned order explains itself (requirement 5). This was the explanation per candidate" stretch.
-
-- **`models.py` **. The existing dict shape already had every field needed (`active` `capacity` `active_order_ids` `minutes_by_order` `processed_cancellation_ids`).
-
-- **Rejected alternative:** raising exceptions for orders/partners. The tests expect a result dict with `partner_id: None` and returning a reason keeps batch processing going when one record is bad. Exception kept for `process_cancellation(None...)` where there is no partner record to return.
+- **Main changes and why:** I added checks for input values, partner activity and capacity, and repeated cancellations. These changes address the main problems found by the tests.
+- **Other option I considered:** I could stop with an error when an order or partner is invalid. I chose to return a result with a reason instead, so other records can still be handled. A cancellation with no partner record still raises an error because there is nothing to update.
+- **Assumptions:** A partner is active only when its value is exactly `True`. IDs must be non-empty text. A cancellation ID is treated as unique, so a later event with the same ID is ignored even if its details differ.
 
 ## 5. Verification
 
-- **Tests added:** `tests/test_regression.py` (214 cases, including one per dataset order). Existing tests untouched.
-
-- **Final result:** `python -m pytest -q` → `443 passed in 0.11s`. `Python -m main` → `{'order_id': 'O-7' 'partner_id': 'P-2' 'pickup_minutes: 13 'eta_minutes: 35 'reason': 'assigned' 'rejected': []}`.
-
-- **New tests checked against the starter:** 57 of the 214 fail on the starter `, service.py` confirming they detect the fixed defects.
-
-- **Dataset run:** 180 orders → 170 assigned 10 all 10 have no `REST-101→DEST-01`-style restaurant→destination route).
-
-- **Known limitations:** see `challenges.md` §6.
+- **Tests added or changed:** The project notes record 214 new tests in `tests/test_regression.py`. The original tests were not changed.
+- **Commands run and results:** The recorded final run of `python -m pytest -q` passed all 443 tests. The recorded `python -m main` demo assigned `O-7` to `P-2`, with pickup time 13 and ETA 35. The results are also written in `TESTING.md`.
+- **Cases checked:** The tests cover bad or missing times, missing routes, inactive and full partners, invalid capacity, repeated cancellations, tied ETAs, malformed partner records, and the sample data.
+- **Known limits:** The recorded final test run had no failures. The code does not check whether an order has been cancelled, and it does not update the selected partner's workload after assigning an order. Those rules could be added later with tests.
