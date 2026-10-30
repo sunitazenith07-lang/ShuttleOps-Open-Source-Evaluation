@@ -73,6 +73,7 @@ def estimate_eta(order, partner, travel, now=0):
 
 
 def assign_order(order, partners, travel, now=0):
+    """Choose a partner without reserving capacity; callers own assignment state."""
     result = {'order_id': order.get('order_id') if isinstance(order, dict) else None,
               'partner_id': None, 'eta_minutes': None}
     error = _order_error(order)
@@ -82,6 +83,10 @@ def assign_order(order, partners, travel, now=0):
         return dict(result, reason='invalid partner collection')
     if not partners:
         return dict(result, reason='no partners provided')
+    for partner in partners:
+        active_orders = partner.get('active_order_ids') if isinstance(partner, dict) else None
+        if isinstance(active_orders, list) and order['order_id'] in active_orders:
+            return dict(result, reason='order is already active')
     chosen = None
     reasons = set()
     for partner in partners:
@@ -101,14 +106,19 @@ def assign_order(order, partners, travel, now=0):
 
 
 def process_cancellation(partner, order_id, event_id):
-    """Return a copy; invalid events/state are left unchanged, never half-applied."""
+    """Return a copy; invalid events/state are left unchanged, never half-applied.
+
+    Active-order accounting must be present, even for a zero-minute order.
+    Rejected events are not recorded, so callers can repair state and retry.
+    This legacy API returns partner state only, without a separate error result.
+    """
     out = deepcopy(partner)
     if not isinstance(out, dict) or not _identifier(order_id) or not _identifier(event_id):
         return out
-    orders = out.get('active_order_ids', [])
+    orders = out.get('active_order_ids')
     processed = out.get('processed_cancellation_ids', [])
-    minutes = out.get('minutes_by_order', {})
-    workload = out.get('workload_minutes', 0)
+    minutes = out.get('minutes_by_order')
+    workload = out.get('workload_minutes')
     if (not isinstance(orders, list) or not isinstance(processed, list)
             or not isinstance(minutes, dict)
             or not all(_identifier(item) for item in orders + processed)
@@ -117,7 +127,7 @@ def process_cancellation(partner, order_id, event_id):
     if event_id in processed:
         return out
     if order_id in orders:
-        released = minutes.get(order_id, 0)
+        released = minutes.get(order_id)
         if not _minutes(released):
             return out
         # Compute before modifying state: mixed huge ints/floats can overflow.
