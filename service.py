@@ -1,11 +1,46 @@
 from copy import deepcopy
+from math import isfinite
+
+
+def is_valid_time(value):
+    """True for a real, finite, non-negative number (bool is not a time)."""
+    return isinstance(value,(int,float)) and not isinstance(value,bool) and isfinite(value) and value>=0
+
+
+def is_valid_id(value):
+    """True for a string that is not empty once whitespace is stripped."""
+    return isinstance(value,str) and bool(value.strip())
+
+
+def validate_order(order):
+    """Return a reason string if the order is invalid, else None."""
+    if not isinstance(order,dict):
+        return 'order is malformed'
+    for field in ('order_id','restaurant_id','destination_zone'):
+        if not is_valid_id(order.get(field)):
+            return f'invalid {field}'
+    if not is_valid_time(order.get('prep_minutes')):
+        return 'invalid prep_minutes'
+    return None
+
+
+def ineligible(partner, reason):
+    """Build the result for a partner that cannot get a reliable ETA."""
+    return {'partner_id':partner.get('partner_id'),'eta_minutes':None,'eligible':False,'reason':reason}
 
 
 def estimate_eta(order, partner, travel, now=0):
-    leg1=travel.get((partner.get('zone'),order.get('restaurant_id')))
-    leg2=travel.get((order.get('restaurant_id'),order.get('destination_zone')))
+    reason=validate_order(order)
+    if reason is None and not is_valid_time(now):
+        reason='invalid current time'
+    if reason:
+        return ineligible(partner,reason)
+    leg1=travel.get((partner.get('zone'),order['restaurant_id']))
+    leg2=travel.get((order['restaurant_id'],order['destination_zone']))
     if leg1 is None or leg2 is None:
-        return {'partner_id':partner.get('partner_id'),'eta_minutes':None,'eligible':False}
+        return ineligible(partner,'missing travel time')
+    if not (is_valid_time(leg1) and is_valid_time(leg2)):
+        return ineligible(partner,'invalid travel time')
     pickup=now+leg1+partner.get('workload_minutes',0)
     return {'partner_id':partner.get('partner_id'),'pickup_minutes':pickup,'eta_minutes':pickup+order.get('prep_minutes',0)+leg2,'eligible':True}
 
