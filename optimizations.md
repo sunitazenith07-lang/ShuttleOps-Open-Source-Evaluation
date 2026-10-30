@@ -1,23 +1,65 @@
-# optimizations.md - Required submission
+# Optimizations
 
-Document optimizations you considered or implemented. Do not claim a speedup or improvement unless you measured it.
+## Implemented Optimizations
 
-## 1. Baseline and objective
-- What needed improvement (correctness, clarity, complexity, memory, repeated work, maintainability)?
-- What evidence suggested an improvement could help?
+### Shared Validation Helpers
+I created reusable helper functions:
+- `is_valid_time()`
+- `is_valid_id()`
 
-## 2. Options considered
-Describe each option's expected benefit and risk, including rejected ideas.
+These reduce duplicated validation logic and improve maintainability.
 
-## 3. Changes implemented
-- Change and reason:
-- Tests that protect correctness:
-- Measurement method and result (only if measured):
+### Early Partner Filtering
+Partners are filtered before ETA calculation if they are:
+- Inactive
+- Configured with invalid capacity
+- Already at capacity
 
-## 4. Trade-offs
-Explain trade-offs involving clarity, correctness, performance, memory, or maintainability.
+This avoids unnecessary ETA calculations for partners who cannot be assigned an order.
 
-## 5. Further improvements
-What would you do next with more time, and how would you validate it?
+### Deterministic Selection
+Partner selection uses:
+- ETA as the primary sorting key
+- `partner_id` as the tie-breaker
 
-If you made no optimization change, state that honestly and compare at least two reasonable options. Correctness and maintainability take priority over unnecessary complexity.
+This makes partner selection deterministic when multiple candidates have the same ETA.
+
+---
+
+## Optimizations Considered but Not Implemented
+
+### ETA Caching
+I considered caching ETA calculations.
+
+**Reason not implemented:**
+- The dataset is relatively small.
+- No performance bottleneck was observed.
+- The additional complexity was not justified.
+
+### Priority Queue
+I considered using a priority queue for candidate selection.
+
+**Reason not implemented:**
+- Sorting the available candidates was sufficient.
+- The simpler implementation is easier to read and maintain.
+
+---
+
+## Trade-offs
+
+Validation increases the code size slightly, but improves:
+- Reliability
+- Correctness
+- Testability
+- Maintainability
+
+I prioritized correctness and clarity over premature optimization.
+
+---
+
+## Future Improvements
+
+If more time were available, I would explore:
+- Batch assignment of orders
+- ETA explanation generation
+- ETA recalculation after preparation-time updates
