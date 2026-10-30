@@ -1,23 +1,34 @@
-# optimizations.md - Required submission
+Optimizations — SmartDispatch
 
-Document optimizations you considered or implemented. Do not claim a speedup or improvement unless you measured it.
+1. Objective
 
-## 1. Baseline and objective
-- What needed improvement (correctness, clarity, complexity, memory, repeated work, maintainability)?
-- What evidence suggested an improvement could help?
+The main objective was to improve the reliability, correctness, and maintainability of the dispatch logic.
 
-## 2. Options considered
-Describe each option's expected benefit and risk, including rejected ideas.
+2. Improvements Made
 
-## 3. Changes implemented
-- Change and reason:
-- Tests that protect correctness:
-- Measurement method and result (only if measured):
+* Added a shared numeric validation helper to avoid repeating validation logic.
+* Checked partner activity and available capacity before assignment.
+* Rejected missing or invalid travel-time data.
+* Used min() to select the lowest ETA candidate without sorting the entire candidate list.
+* Added cancellation event tracking to prevent duplicate workload release.
 
-## 4. Trade-offs
-Explain trade-offs involving clarity, correctness, performance, memory, or maintainability.
+3. Alternatives Considered
 
-## 5. Further improvements
-What would you do next with more time, and how would you validate it?
+* Sorting all candidates: This would provide a complete ranking, but is unnecessary when only the best candidate is required.
+* Selecting the best candidate during iteration: This could reduce additional memory usage, but the current candidate-list approach is straightforward and easy to understand.
+* Caching ETA calculations: This could reduce repeated calculations, but would require careful invalidation when workload or travel data changes.
 
-If you made no optimization change, state that honestly and compare at least two reasonable options. Correctness and maintainability take priority over unnecessary complexity.
+4. Performance Measurements
+
+No formal performance benchmark was conducted. Therefore, no measured speed improvement is claimed.
+
+5. Trade-offs
+
+The implementation prioritizes clear validation, predictable assignment, and safe cancellation handling over advanced performance optimizations.
+
+6. Future Improvements
+
+* Benchmark assignment with larger datasets.
+* Consider streaming candidate selection if memory usage becomes significant.
+* Add integration tests using the expanded synthetic dataset.
+* Explore caching only if profiling shows repeated ETA calculations are a bottleneck.
