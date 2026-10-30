@@ -65,3 +65,20 @@ def test_eta_is_ineligible_when_either_required_route_is_missing(travel):
     result = estimate_eta(order, partner, travel)
     assert result["eligible"] is False
     assert result["eta_minutes"] is None
+
+
+def test_eta_rejects_invalid_workload_without_arithmetic_error():
+    order = new_order("INVALID-WORKLOAD", "REST-101", "DEST-01")
+    partner = new_partner("PARTNER-001", "ZONE-A")
+    partner["workload_minutes"] = float("nan")
+    result = estimate_eta(order, partner, {("ZONE-A", "REST-101"): 1, ("REST-101", "DEST-01"): 1})
+    assert result["eligible"] is False
+    assert result["eta_minutes"] is None
+
+
+def test_eta_accepts_large_integer_time_values():
+    order = new_order("LARGE-TIME", "REST-101", "DEST-01", prep_minutes=10**400)
+    partner = new_partner("PARTNER-001", "ZONE-A")
+    result = estimate_eta(order, partner, {("ZONE-A", "REST-101"): 10**400, ("REST-101", "DEST-01"): 10**400})
+    assert result["eligible"] is True
+    assert result["eta_minutes"] == 3 * 10**400
