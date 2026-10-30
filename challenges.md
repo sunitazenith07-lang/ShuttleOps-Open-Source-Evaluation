@@ -1,55 +1,75 @@
-# challenges.md - COMPULSORY submission
+# challenges.md. COMPULSORY submission
 
-## 1. Challenge or confusing behaviour
+## 1.. Confusing behaviour
 
-The hardest challenge was understanding why `bool` values needed special treatment in numeric validation. Python's `True` and `False` are instances of `int` (`isinstance(True, int)` returns `True`), so `True` passes an `isinstance(value, (int, float))` check. The test `test_invalid_or_missing_travel_time_rejected[True-1]` expected `eligible=False` for a travel time of `True`, and `test_capacity_boundary_matrix[True-0]` expected rejection of capacity `True`. This meant every numeric validation had to explicitly check `isinstance(value, bool)` first and reject it.
+The hardest part was figuring out why boolean values needed special handling in numeric validation. In Python `and `False` are actually subclasses of `int`. So when you check `isinstance(True, int)` it returns `True`. That means `True` gets through a validation check like `isinstance(value, (int float))`.. The tests expected that `True` should not be accepted as a valid number. For example `test_invalid_or_missing_travel_time_rejected[True-1]` expected `=False` when travel time was `True`.. Test_capacity_boundary_matrix[true-0]` expected capacity `True` to be rejected. This meant every numeric validation had to check if the value was a boolean and reject it if it was.
 
-A related subtlety: `True == 1` and `True == 1.0` are both `True` in Python, so equality comparisons cannot distinguish them either. Only `isinstance` or `is` checks work.
+Another tricky thing is that ` == 1` and `True == 1.0` both evaluate to `True`. So you can't use equality checks to differentiate them. Only `isinstance` or `is` checks work properly.
 
 ## 2. Evidence
 
 ```
-# Before fix — test failure:
-test_invalid_or_missing_travel_time_rejected[True-1]
-  assert result["eligible"] is False
-  E  assert True is False
 
-# Root cause in original service.py:
+# Before fix. Test failure:
+
+test_invalid_or_missing_travel_time_rejected[True-1]
+
+assert result["eligible"] is False
+
+E  assert True is False
+
+# Root cause in service.py:
+
 leg1 = travel.get(("Z","R"))  # returns True (a bool)
-if leg1 is None or leg2 is None:  # True is not None, so this passes
-    ...
-pickup = now + leg1 + workload  # True is treated as 1, arithmetic succeeds silently
+
+if leg1 is None or leg2 is None:  # True is not None. This passes
+
+...
+
+pickup = now + leg1 + workload  # True is treated as 1 arithmetic succeeds silently
+
 ```
 
-Similarly, in my own regression test during development, I wrote `if bad_leg1 == 1.0` to check for a valid float, but this branch also matched `True` because `True == 1.0`. I had to change it to `isinstance(bad_leg1, float) and bad_leg1 == 1.0`.
+During my own testing I wrote a check like `if bad_leg1 == 1.0` to see if a float was valid. But that didn’t work because `True == 1.0` is `True`. I had to change it to `isinstance(bad_leg1, float) and bad_leg1 == 1.0`.
 
 ## 3. What I tried
 
-1. First attempted validation with just `isinstance(value, (int, float)) and value >= 0` — this accepted `True`/`False` and failed the bool-related tests
-2. Added `not isinstance(value, bool)` as the first check — this fixed the travel-time and capacity bool tests
-3. Also needed to handle `float("nan")` and `float("inf")` — `nan >= 0` is `False` (rejects correctly), but `inf >= 0` is `True` (would accept infinity). Added explicit `math.isnan()` and `math.isinf()` checks
-4. Traced each failing parametrized test case one-by-one to confirm the validation matched what the test expected as valid vs. invalid
+1. First I tried validating with isinstance(value, (int, float)) and value >= 0`. This allowed `True` and `False` to pass which broke the tests.
+
+2. Then I added `not isinstance(value, bool)` as the first check. That fixed the issues with travel time and capacity tests.
+
+3. I also had to handle `float("nan")`. Float("inf")`. `Nan >= 0` returns `False` which's correct but `inf >= 0` returns `True`. So I added `math.isnan()`. Math.isinf()` checks to reject those cases.
+
+4. I went through each failing test case one by one to make sure the validation matched what the test expected for valid and invalid inputs.
 
 ## 4. Resolution
 
-Root cause: the original `estimate_eta()` had zero type-checking — it only checked `is None`. The fix was creating a reusable `_is_valid_numeric()` function that enforces:
-- Must be `int` or `float`
-- Must NOT be `bool` (checked first, since `bool` is a subclass of `int`)
-- Must not be `NaN` or `inf` (via `math.isnan`/`math.isinf`)
-- Must be ≥ 0
+The root cause was that the original `estimate_eta()` function had no type checking. It only checked for `None`. The fix was to create a _is_valid_numeric()` function that checks:
 
-This single function is used for travel times, prep_minutes, and the `now` parameter. It addresses the cause (missing validation) rather than hiding symptoms (try/except around arithmetic).
+- The value must be an `int` or `float`
+
+- It must not be a `bool` (checked first because bool is a subclass of int)
+
+- It must not be `NaN` or `inf` (using `math.isnan()` and `math.isinf()`)
+
+- It must be greater than or equal to zero
+
+This single function is now used for travel times, prep minutes and the `now` parameter. It fixes the problem instead of just hiding it under try/catch blocks.
 
 ## 5. Proof and regression prevention
 
-- `TestTravelTimeValidation::test_bad_leg1_rejected[True-3]` — confirms `True` as travel time is rejected
-- `TestTravelTimeValidation::test_bad_leg2_rejected[3-True]` — same for leg2
-- `test_invalid_or_missing_travel_time_rejected[True-1]` and `[1-False]` — original tests now pass
-- `test_capacity_boundary_matrix[True-0]` — confirms `True` as capacity is rejected
-- `test_preparation_time_validation[True]` — confirms `True` as prep is rejected
+- `TestTravelTimeValidation::test_bad_leg1_rejected[True-3]`. Confirms `True` as travel time is rejected
 
-Related case that might still break: if a future change allows `numpy` numeric types (e.g., `numpy.int64`), the `isinstance(value, (int, float))` check would reject them. This is acceptable since the project uses only standard Python types.
+- `TestTravelTimeValidation::test_bad_leg2_rejected[3-True]`. Same for leg2
+
+- `test_invalid_or_missing_travel_time_rejected[True-1]` and `[1-]`. Original tests now pass
+
+- `test_capacity_boundary_matrix[True-0]`. Confirms `True` as capacity is rejected
+
+- `test_preparation_time_validation[True]`. Confirms `True` as prep time is rejected
+
+One edge case that might still break things: if a future change allows `numpy` numeric types like `numpy.int64` the `isinstance(value, (int float))` check would reject them. That’s acceptable since the project only uses Python types.
 
 ## 6. Unresolved challenge or next step
 
-No major unresolved issues. All 300 tests pass. One minor limitation: `workload_minutes` on the partner dict is not validated (it could theoretically be negative or non-numeric), but no existing test requires this validation, and adding it could break compatibility with the starter data flow. If time allowed, I would add workload validation in `_is_eligible_partner()` with corresponding tests.
+There are no unresolved issues. All 300 tests pass. One small limitation is that `workload_minutes`, on the partner dict is not validated. It could be negative or non-numeric. No existing test requires validation. Adding it might break compatibility with the data flow. If I had time I would add validation in `_is_eligible_partner()` and write tests for it.
