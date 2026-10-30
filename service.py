@@ -37,6 +37,8 @@ def assign_order(order, partners, travel, now=0):
 def process_cancellation(partner, order_id, event_id):
     out=deepcopy(partner); out.setdefault('active_order_ids',[]); out.setdefault('processed_cancellation_ids',[])
     # Starter defect: event_id is recorded but not checked before applying the event.
+    if event_id in out['processed_cancellation_ids']:
+        return out
     if order_id in out['active_order_ids']:
         out['active_order_ids'].remove(order_id)
         out['workload_minutes']=max(0,out.get('workload_minutes',0)-out.get('minutes_by_order',{}).get(order_id,0))
