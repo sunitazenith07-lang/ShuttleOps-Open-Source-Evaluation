@@ -66,18 +66,26 @@ def availability_reason(partner):
         return 'at capacity'
     return None
 
+def partner_label(partner):
+    """Readable partner name for reasons; tolerates malformed records."""
+    return str(partner.get('partner_id')) if isinstance(partner,dict) else 'unknown partner'
+
 
 def assign_order(order, partners, travel, now=0):
     options=[]
+    excluded=[]
     for partner in partners:
-        if availability_reason(partner) is not None:
-            continue
-        estimate=estimate_eta(order,partner,travel,now)
-
-        if estimate['eligible']:
-            options.append(estimate)
+        reason=availability_reason(partner)
+        if reason is None:
+            estimate=estimate_eta(order,partner,travel,now)
+            if estimate['eligible']:
+                options.append(estimate)
+                continue
+            reason=estimate['reason']
+        excluded.append(f'{partner_label(partner)}: {reason}')
     if not options:
-        return {'order_id':order.get('order_id'),'partner_id':None,'eta_minutes':None,'reason':'no eligible partner or missing time data'}
+        summary='; '.join(sorted(excluded)) or 'no partners supplied'
+        return {'order_id':order.get('order_id'),'partner_id':None,'eta_minutes':None,'reason':f'no eligible partner ({summary})'}
     chosen=min(options,key=lambda item:(item['eta_minutes'],str(item['partner_id'])))
     return {'order_id':order.get('order_id'),'partner_id':chosen['partner_id'],'pickup_minutes':chosen['pickup_minutes'],'eta_minutes':chosen['eta_minutes'],'reason':'assigned'}
 
