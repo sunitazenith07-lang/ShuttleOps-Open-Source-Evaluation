@@ -1,49 +1,63 @@
-1. Baseline & Initial State
+1. Baseline and Initial State
 
-When I first cloned the repository and ran the test suite, here is what I observed:
-- Ran `python -m pip install -r requirements-dev.txt` (installed pytest 9.2.0 and dependencies).
-- Ran `python -m pytest -q`, which resulted in: **65 failed, 164 passed** (as expected from the brief, the starter code had intentional gaps in validation and edge-case handling).
-- Running `python -m main` gave a clean demo output `{'order_id': 'O-7', 'partner_id': 'P-2', 'pickup_minutes': 13, 'eta_minutes': 35, 'reason': 'assigned'}`, but the underlying logic was missing safety guards for malformed or edge-case data.
+When I first cloned the repository and ran the test suite these're the observations:
 
+- I ran python -m pip install -r requirements-dev.txt which installed pytest 9.2.0 and the required dependencies.
+
+- I ran python -m pytest -q which gave a result of 65 failed 164 passed. This was expected because the starter code purposely leaves gaps in validation and edge case handling.
+
+- Running python -m main produced a clean demo output {'order_id': 'O-7' 'partner_id': 'P-2' 'pickup_minutes: 13 'eta_minutes: 35 'reason': 'assigned'}. However the underlying logic did not protect against edge case data.
 
 2. Codebase Overview
 
-I spent some time exploring the core modules:
-- `service.py`: Contains the main decision logic (`estimate_eta`, `assign_order`, `process_cancellation`).
-- `models.py`: Simple dict-factory helpers (`new_partner`, `new_order`).
-- `fixtures.py`: Sample test orders, partners, and travel maps.
-- `tests/`: Extensive contract, acceptance matrix, and edge case test suites.
+I explored the core modules for hours:
 
-My initial review of `service.py` confirmed that while the core ETA arithmetic formulas were outlined, eligibility checks (active status, capacity limits), travel-time validation (preventing negative/zero/missing data bypasses), and cancellation idempotency were incomplete.
+- The file service.py holds the decision logic, including functions estimate_eta assign_order and process_cancellation.
 
+- The file models.py contains dictionary factory helpers such as new_partner and new_order.
+
+- The file fixtures.py holds sample test orders, partners and travel maps.
+
+- The directory tests/ contains contract tests, acceptance matrix tests and edge case tests.
+
+During my review of service.py I noticed that the core ETA rules were present. However checks for eligibility such as status and capacity limits were missing. Validation for travel time that would stop zero or missing data was also incomplete. Finally the logic to prevent cancellations was not yet implemented.
 
 3. Key Issues Fixed
 
-I focused my changes strictly inside `service.py` without touching the models, fixtures, or existing test files:
+I made all changes inside service.py. I did not modify the models, fixtures or any existing test files.
 
-- **Travel Time Validation:**
-  - *Problem:* Negative travel times, strings, booleans, and `NaN`/`inf` were either slipping through or causing runtime errors.
-  - *Fix:* Implemented a strict `_is_valid_travel_time()` helper to validate numeric types (excluding booleans since Python treats `bool` as a subclass of `int`), non-negative values, and finite ranges. Missing travel data is now correctly treated as unknown rather than zero.
+- Travel Time Validation:
 
-- **Active Status & Capacity Filtering:**
-  - *Problem:* Inactive partners and partners at full capacity were being assigned orders.
-  - *Fix:* Added `_is_eligible_partner()` to ensure partners have `active=True`, valid positive capacity, and active order counts strictly below their limit.
+Problem: Negative travel times, strings, booleans and values such as NaN or inf were either passing through or causing runtime errors.
 
-- **Cancellation Idempotency:**
-  - *Problem:* Calling `process_cancellation()` twice with the same `event_id` released workload and capacity twice.
-  - *Fix:* Added an explicit check at the top of `process_cancellation()` to return early if the `event_id` is already in `processed_cancellation_ids`.
+Fix: I added a helper called _is_valid_travel_time that checks for types (but not booleans, because Python treats bool as a subclass of int) ensures values are not negative and verifies that values are finite. When travel data is missing the code now treats it as unknown of zero.
 
-- **Robust Input & Order Validation:**
-  - *Problem:* Malformed order IDs, `None` fields, and negative preparation times were being processed.
-  - *Fix:* Added input validation guards for order attributes and numeric ranges (`now`, `prep_minutes`).
+- Status and Capacity Filtering:
 
+Problem: Partners that were inactive or that had reached their capacity were still being assigned orders.
 
-4. Testing & Verification
+Fix: I added a helper called _is_eligible_partner that guarantees a partner has = a valid positive capacity and a current order count strictly below that capacity.
 
-To ensure high confidence, I added a new test file `tests/test_regressions.py` covering 71 additional edge cases across various failure modes, while leaving all existing tests untouched.
+- Cancellation Idempotency:
 
-- **Final Test Suite Run:** `python -m pytest -q`
-- **Result:** **300 passed in 0.30s** (229 original tests + 71 new regression tests).
-- **Demo Check:** `python -m main` runs successfully and outputs valid deterministic assignments.
+Problem: Running process_cancellation() with the same event_id caused workload and capacity to be released twice.
 
-All requirements, edge cases, and tie-breaking rules (lexicographic partner ID sorting on ETA ties) are fully satisfied.
+Fix: I added a check at the start of process_cancellation() that returns immediately if the event_id already appears in the set processed_cancellation_ids.
+
+- Input and Order Validation:
+
+Problem: Orders with IDs None fields or negative preparation times were processed without error.
+
+Fix: I added validation guards for all order attributes and for ranges such as now and prep_minutes.
+
+4. Testing and Verification
+
+To be very sure I added a test file called tests/test_regressions.py. This file covers 71 edge cases that test different failure scenarios. I did not change any of the existing tests.
+
+- Final Test Suite Run: I ran python -m pytest -q.
+
+- Result: The command returned 300 passed in 0.30 seconds. This includes 229 tests and 71 new regression tests.
+
+- Demo Check: Running python -m succeeded and printed an assignment.
+
+All requirements, all edge cases and the rule, for breaking ties choosing the partner with the ID when ETAs are equal are now fully satisfied.
