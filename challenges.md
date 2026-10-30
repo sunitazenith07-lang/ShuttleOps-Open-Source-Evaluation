@@ -1,23 +1,19 @@
-# challenges.md - COMPULSORY submission
-
-This file is mandatory and worth 5 marks. Describe your actual experience honestly. Do not invent difficulties to fill the page.
+# Challenges
 
 ## 1. Challenge or confusing behaviour
-What candidate-selection, ETA, capacity, missing-data, tie-breaking, or cancellation case was difficult to understand?
+The hardest distinction was between missing route data and a valid zero-minute route. Cancellation idempotency also required checking identity before workload or active-order mutations.
 
 ## 2. Evidence
-Summarize the relevant assertion, log, output, or minimal reproducible example.
+The baseline had 65 failures, including inactive partners, full capacity, negative preparation, invalid route values, and duplicate cancellation. Acceptance tests use `None` for missing routes and `0` for valid zero-duration routes.
 
 ## 3. What I tried
-List debugging steps or experiments you actually performed and what each one showed.
+I ran the complete pytest suite, focused on failing contract tests, and ran the demo. The failures showed that filtering needed to be implemented in the service rather than adjusted in fixtures or assertions.
 
 ## 4. Resolution
-What was the root cause? What did you change, and why did it address the cause rather than hide the symptom?
+The root cause was missing value-contract checks. I added finite non-negative numeric validation and explicit dictionary lookup. Duplicate cancellation now exits before mutation when its event ID is already processed.
 
 ## 5. Proof and regression prevention
-Which test(s) demonstrate the fix? What related case might still break?
+ETA matrices, route-missingness cases, capacity boundaries, duplicate-cancellation tests, and four focused contract regressions now pass. Final result: 233 passed. Externally malformed dictionaries remain an area for further fuzz testing.
 
 ## 6. Unresolved challenge or next step
-State remaining limitations and how you would investigate them next.
-
-If you did not encounter a major blocker, say so honestly and describe the hardest edge case you deliberately tested and what it taught you. Do not manufacture a story.
+No visible-suite failures remain. Future external integrations should add explicit record schemas. The next investigation would fuzz malformed nested dictionaries and verify no exceptions escape public service functions.

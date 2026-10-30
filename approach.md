@@ -1,32 +1,27 @@
-# approach.md - Required submission
-
-Complete this file in your own words. Be concise and specific to the work you actually performed.
+# Approach
 
 ## 1. Baseline
-- Commands run before editing:
-- Initial test result (include the actual summary):
-- Demo/output observed:
+- Commands run before editing: `./.venv/bin/python -m pytest -q` and `python3 -m main`.
+- Initial result: 65 failed, 164 passed.
+- Demo output observed: `{'order_id': 'O-7', 'partner_id': 'P-2', 'pickup_minutes': 13, 'eta_minutes': 35, 'reason': 'assigned'}`.
 
 ## 2. Codebase understanding
-- Important files/functions inspected:
-- Candidate filtering, ETA calculation, and capacity flow traced:
-- How you confirmed your understanding:
+- Inspected `service.py`, `models.py`, `fixtures.py`, `main.py`, the dataset documentation, and every test under `tests/`.
+- Traced assignment through `assign_order()` and `estimate_eta()`, including travel lookups, workload addition, active/capacity filtering, and cancellation processing.
+- Parameterized tests confirmed that ETA uses `now + partner-to-restaurant + workload + preparation + restaurant-to-customer`.
 
 ## 3. Investigation and implementation strategy
-For each major defect, describe the symptom, hypothesis, evidence from a test/log/example, and the fix chosen.
-- Issue 1:
-- Issue 2:
-- Issue 3 (if applicable):
+- **Inactive and full partners:** the starter omitted eligibility checks. I added exact-active (`is True`), valid-capacity, and active-order count checks.
+- **Invalid values:** negative travel and preparation values could be accepted. I added finite, non-negative, non-Boolean numeric validation.
+- **Duplicate cancellations:** repeated cancellation could release state again. I check processed IDs before mutation.
 
 ## 4. Implementation decisions
-- Main changes and why:
-- Alternatives considered and why rejected:
-- Assumptions:
+- Validation helpers are private in `service.py` and reject strings, booleans, negative values, NaN, and infinity. Missing data remains distinct from valid zero-minute values.
+- Candidate selection remains a deterministic minimum over ETA and string partner ID.
+- Cancellation copies partner state and safely normalizes malformed collections.
 
 ## 5. Verification
-- Tests added or changed:
-- Commands run and actual results:
-- Edge cases verified:
-- Remaining failures or known limitations:
-
-Record actual engineering decisions and evidence. Do not claim tests or experiments you did not run.
+- Existing parameterized tests were not weakened. The suite exercised 229 cases covering zeros, large values, invalid types, capacity boundaries, tie-breaking, missing routes, and repeated cancellations.
+- Final command: `./.venv/bin/python -m pytest -q` — 233 passed in 0.07s.
+- Final demo command: `python3 -m main` — produced the assigned sample result above.
+- No remaining visible-suite failures are known.
