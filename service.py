@@ -28,6 +28,15 @@ def ineligible(partner, reason):
     """Build the result for a partner that cannot get a reliable ETA."""
     return {'partner_id':partner.get('partner_id'),'eta_minutes':None,'eligible':False,'reason':reason}
 
+def compute_eta(now, to_restaurant, workload, prep, to_customer):
+    """Return (pickup, eta) in minutes.
+
+    pickup = now + partner-to-restaurant travel + remaining workload
+    eta = pickup + restaurant preparation + restaurant-to-customer travel
+    """
+    pickup=now+to_restaurant+workload
+    return pickup,pickup+prep+to_customer
+
 
 def estimate_eta(order, partner, travel, now=0):
     reason=validate_order(order)
@@ -41,8 +50,11 @@ def estimate_eta(order, partner, travel, now=0):
         return ineligible(partner,'missing travel time')
     if not (is_valid_time(leg1) and is_valid_time(leg2)):
         return ineligible(partner,'invalid travel time')
-    pickup=now+leg1+partner.get('workload_minutes',0)
-    return {'partner_id':partner.get('partner_id'),'pickup_minutes':pickup,'eta_minutes':pickup+order.get('prep_minutes',0)+leg2,'eligible':True}
+    workload=partner.get('workload_minutes',0)
+    if not is_valid_time(workload):
+        return ineligible(partner,'invalid workload_minutes')
+    pickup,eta=compute_eta(now,leg1,workload,order['prep_minutes'],leg2)
+    return {'partner_id':partner.get('partner_id'),'pickup_minutes':pickup,'eta_minutes':eta,'eligible':True}
 
 
 def is_valid_capacity(value):
