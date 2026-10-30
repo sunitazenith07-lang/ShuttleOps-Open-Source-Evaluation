@@ -1,6 +1,6 @@
 # DISPATCH_NOTES.md — Required submission
 
-All examples are consistent with the current implementation (`service.py`) and verified by tests in `tests/test_regression.py`.
+All examples are consistent with the final implementation (`service.py`, commit `3ddc5d2`) and verified by tests in `tests/test_regression.py`. AI-use declaration: `AI_USAGE_TEMPLATE.md`.
 
 ## 1. Worked ETA example
 From `fixtures.py` (also the `python -m main` demo):
@@ -30,7 +30,10 @@ Order `O` (`R` → `D`) with partners `OFF` (active=False), `FULL` (capacity=1, 
 - **Units**: all times are minutes on a shared clock; `now` is "minutes since reference", `eta_minutes` is an absolute ETA while `eta - now` is the delivery duration.
 - **Workload model**: `workload_minutes` is the total remaining committed work; it delays pickup directly. `minutes_by_order[order_id]` is the per-order release amount used by cancellation.
 - **Tie-breaking**: lowest `eta_minutes`, then ascending lexicographic `partner_id` (`min` on `(eta, str(partner_id))`); deterministic and independent of input order.
-- **Strict records**: `active` must be `True`; `capacity` an `int >= 1` (bool/0/negative/float rejected); times must be finite non-negative numbers; IDs must be non-empty strings. Missing `active_order_ids`/`workload_minutes` default to `[]`/`0`; present-but-malformed rejects the partner.
-- **Cancellation idempotency**: `event_id` already in `processed_cancellation_ids` → no-op. A valid workload floors at 0; a malformed workload (e.g. the string `'20'`) is left unchanged rather than silently coerced to 0, and the partner stays ineligible until the record is fixed. Unknown orders are recorded but release nothing.
-- **Result schema**: every `assign_order` result has the same five keys — `order_id`, `partner_id`, `pickup_minutes`, `eta_minutes`, `reason`. When unassigned, `partner_id`, `pickup_minutes` and `eta_minutes` are `None`. **Limitation**: events with no `event_id` (7 exist in `records.json`, all duplicates) are deduplicated per partner — only the first ID-less event applies; a second distinct ID-less event would be ignored.
+- **Strict records**: `active` must be `True`; `capacity` must be an `int >= 1` (bool, 0, negative and float are rejected); IDs must be non-empty strings. Times must be finite, non-negative numbers, and an int too large to convert to a float (e.g. `10**400`) is rejected rather than crashing with `OverflowError`. Missing `active_order_ids`/`workload_minutes` default to `[]`/`0`; present-but-malformed values reject the partner.
+- **Missing travel is never zero**: if either required leg is missing or invalid, the partner is ineligible for that order, with a reason naming the leg.
+- **ETA range**: even with valid inputs, a computed ETA that is not a finite non-negative number (e.g. `1e308` legs summing to `inf`) is rejected with reason `'ETA out of range'` instead of being assigned.
+- **Cancellation idempotency**: an `event_id` already in `processed_cancellation_ids` → no-op, so replaying the same events leaves the state unchanged. A valid workload floors at 0. A malformed workload (e.g. the string `'20'`) is left unchanged rather than silently coerced to 0, and the partner stays ineligible until the record is fixed. If `processed_cancellation_ids` or `active_order_ids` is present but not a list (e.g. a tuple), the record is returned untouched and the event skipped, because replacing it with `[]` would erase event history (allowing a double release) or real orders. A missing or `None` list defaults to `[]`. Unknown orders are recorded but release nothing.
+- **Limitation**: events with no `event_id` (7 exist in `records.json`, all duplicates) are deduplicated per partner, so only the first ID-less event applies and a second distinct ID-less event would be ignored.
+- **Result schema**: every `assign_order` result has the same five keys: `order_id`, `partner_id`, `pickup_minutes`, `eta_minutes`, `reason`. When unassigned, `partner_id`, `pickup_minutes` and `eta_minutes` are `None`.
 - `explain_assignment` evaluates partners twice (once for the decision, once for the report) — a deliberate readability trade-off.

@@ -1,5 +1,7 @@
 # challenges.md - COMPULSORY submission
 
+> AI-use declaration: `AI_USAGE_TEMPLATE.md`. Student contribution: `approach.md`, section 0.
+
 ## 1. Challenge or confusing behaviour
 Two real difficulties: (a) deciding the correct semantics for duplicate cancellation events when the dataset contains both duplicated `event_id`s AND events with no `event_id` at all, and (b) the test matrix deliberately leaves some inputs unconstrained (`active=1`, `"yes"`), forcing a defensible strictness decision rather than a test-driven one.
 
@@ -19,8 +21,21 @@ Two real difficulties: (a) deciding the correct semantics for duplicate cancella
 - Strictness ambiguity resolved by treating non-conforming values as malformed input (reject), consistent with "do not silently convert invalid data into valid-looking values".
 
 ## 5. Proof and regression prevention
-- `test_duplicate_cancellation_is_idempotent_across_workloads` (15 cases), `test_duplicate_cancellation_is_idempotent`, `test_duplicate_event_id_with_different_order_still_ignored`, `test_full_cancellation_stream_replay_is_idempotent` (dataset replay) and `test_duplicate_event_ids_in_dataset_do_not_double_release` all pass: 279 total.
+- `test_duplicate_cancellation_is_idempotent_across_workloads` (15 cases), `test_duplicate_cancellation_is_idempotent`, `test_duplicate_event_id_with_different_order_still_ignored`, `test_full_cancellation_stream_replay_is_idempotent` (dataset replay) and `test_duplicate_event_ids_in_dataset_do_not_double_release` all pass: 288 total.
 - Related case that could still break: if a future spec allows multiple distinct ID-less cancellation events per partner, the `None`-dedup assumption must be revisited.
 
 ## 6. Unresolved challenge or next step
 - Remaining limitation: cancellations without `event_id` are deduplicated as a group per partner, so a second genuinely-different ID-less event on the same partner is ignored. The dataset's ID-less events are duplicates, so the conservative choice is correct for this data. If the spec changed, I would dedup ID-less events by `(order_id)` fallback and re-run the dataset replay test.
+
+## 7. Later challenge: defects that a passing test suite did not reveal
+- **Situation:** with 279 tests already passing, I asked for further independent audits instead of stopping. Those audits used adversarial probe scripts, kept outside the repository.
+- **Evidence:**
+  - `estimate_eta` with `prep_minutes=10**400` raised `OverflowError: int too large to convert to float`. Python ints have no size limit, but `math.isfinite()` converts its argument to a float.
+  - Legs of `1e308` returned `eligible=True, eta_minutes=inf, reason='assigned'`. Every input was finite, but their sum overflowed.
+  - A partner whose `processed_cancellation_ids` was the tuple `('C1',)` had it replaced with `[]`. Event `C1` was then applied again and the workload dropped from 10 to 0: the double release the brief forbids.
+- **Why it was confusing:** each piece of code looked correct on its own. Validating every input was not enough: the computed result also had to be checked, and "repairing" malformed state turned out to be just as dangerous as crashing on it.
+- **Resolution (commit `3ddc5d2`):**
+  - `_is_valid_time` treats `OverflowError` as invalid.
+  - `estimate_eta` validates the final ETA (`'ETA out of range'`).
+  - `process_cancellation` leaves a malformed list field untouched and skips the event, while a missing field still defaults to `[]`.
+- **Proof:** 9 new regression cases. 8 fail on the previous commit and pass now; the 9th confirms that missing fields still default as before. The full suite has 288 passing.
