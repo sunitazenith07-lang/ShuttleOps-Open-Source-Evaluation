@@ -69,3 +69,53 @@ def test_no_eligible_partner_reports_each_reason():
     assert result['reason'] == (
         'no eligible partner (P1: inactive; P2: at capacity; P3: missing travel time)'
     )
+
+
+def test_inactive_partner_excluded():
+    p = new_partner('P', 'Z')
+    p['active'] = False
+    result = assign_order(order(), [p], TRAVEL)
+    assert result['partner_id'] is None
+    assert 'P: inactive' in result['reason']
+
+
+@pytest.mark.parametrize('load,expected', [(1, 'P'), (2, None)])
+def test_capacity_boundary(load, expected):
+    p = new_partner('P', 'Z', 2)
+    p['active_order_ids'] = [f'OLD{i}' for i in range(load)]
+    assert assign_order(order(), [p], TRAVEL)['partner_id'] == expected
+
+
+def test_missing_partner_leg_is_not_zero():
+    no_route = new_partner('A', 'X')
+    far = new_partner('B', 'Y')
+    travel = {('Y', 'R'): 50, ('R', 'D'): 1}
+    result = assign_order(order(), [no_route, far], travel)
+    assert result['partner_id'] == 'B'
+    assert result['eta_minutes'] == 51
+
+
+def test_missing_customer_leg_blocks_eta():
+    result = assign_order(order(), [new_partner('P', 'Z')], {('Z', 'R'): 1})
+    assert result['partner_id'] is None
+    assert 'P: missing travel time' in result['reason']
+
+
+def test_eta_tie_breaks_by_string_partner_id():
+    partners = [new_partner('P2', 'Z'), new_partner('P10', 'Z')]
+    for ordering in (partners, partners[::-1]):
+        assert assign_order(order(), ordering, TRAVEL)['partner_id'] == 'P10'
+
+
+def test_no_eligible_partner_reports_each_reason():
+    inactive = new_partner('P1', 'Z')
+    inactive['active'] = False
+    full = new_partner('P2', 'Z', 1)
+    full['active_order_ids'] = ['X']
+    no_route = new_partner('P3', 'Z')
+    result = assign_order(order(), [no_route, full, inactive], {})
+    assert result['partner_id'] is None
+    assert result['eta_minutes'] is None
+    assert result['reason'] == (
+        'no eligible partner (P1: inactive; P2: at capacity; P3: missing travel time)'
+    )
