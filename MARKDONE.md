@@ -149,7 +149,7 @@ Example: workload 9 min, order O1 workload 9 min, cancellation C1 → pehli call
 - Core logic service.py mein update hui: input validation, candidate eligibility/capacity filtering, deterministic best selection, aur duplicate cancellation protection.
 - Required notes (approach.md, challenges.md, optimizations.md, TESTING.md, DISPATCH_NOTES.md) actual recorded work/results ke basis par fill kiye gaye.
 - Gemini ke liye GEMINI_HANDOFF.md banaya gaya.
-- Yeh personal walkthrough ab MARKDONE.md ke roop mein add ho raha hai.
+- Yeh personal walkthrough MARKDONE.md mein maujood hai aur personal learning guide ke roop mein rakha gaya hai.
 - Koi optional stretch feature nahi add kiya.
 
 ## 11. Verify kiye gaye results
