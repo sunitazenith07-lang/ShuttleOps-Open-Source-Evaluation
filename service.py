@@ -44,7 +44,10 @@ def estimate_eta(order, partner, travel, now=0):
         reason='invalid current time'
     if reason:
         return ineligible(partner,reason)
-    leg1=travel.get((partner.get('zone'),order['restaurant_id']))
+    zone=partner.get('zone')
+    if not is_valid_id(zone):
+        return ineligible(partner,'invalid zone')
+    leg1=travel.get((zone,order['restaurant_id']))
     leg2=travel.get((order['restaurant_id'],order['destination_zone']))
     if leg1 is None or leg2 is None:
         return ineligible(partner,'missing travel time')
