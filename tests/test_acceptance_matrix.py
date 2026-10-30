@@ -168,3 +168,13 @@ def test_distinct_cancellation_events_recorded_once_each(event_id):
     result = process_cancellation(partner,"O",event_id)
     assert result["processed_cancellation_ids"] == [event_id]
     assert result["workload_minutes"] == 0
+
+
+@pytest.mark.parametrize("workload", [-1, "5", True, None, float("nan"), float("inf")])
+def test_invalid_partner_workload_is_rejected(workload):
+    order = new_order("O", "R", "D")
+    partner = new_partner("P", "Z")
+    partner["workload_minutes"] = workload
+    result = estimate_eta(order, partner, {("Z", "R"): 2, ("R", "D"): 3})
+    assert result["eligible"] is False
+    assert result["eta_minutes"] is None
