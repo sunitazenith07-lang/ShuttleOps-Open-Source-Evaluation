@@ -1,23 +1,25 @@
-# optimizations.md - Required submission
+# Optimizations and trade-offs
 
-Document optimizations you considered or implemented. Do not claim a speedup or improvement unless you measured it.
+AI-assisted engineering record. No runtime speedup is claimed; no benchmark was performed.
 
-## 1. Baseline and objective
-- What needed improvement (correctness, clarity, complexity, memory, repeated work, maintainability)?
-- What evidence suggested an improvement could help?
+## Implemented
+Use shared validation helpers instead of duplicating numeric/type rules in handlers.
+Select the best candidate while iterating rather than retaining all eligible estimates:
+minimum selection is O(n). A preliminary ID count also takes O(n) time and O(n) memory
+and excludes ambiguous duplicate IDs deterministically. No candidate sort is needed.
+Tests verify lowest ETA, lexicographic ties and reversed input order.
 
-## 2. Options considered
-Describe each option's expected benefit and risk, including rejected ideas.
+## Options considered
+A sorted candidate list would make future explanation output easier but adds O(n log n)
+work and unnecessary retained estimates for this recommendation-only API.
+A set of processed cancellation IDs could speed membership checks for long histories, but
+preserving the list schema is simpler for this exercise; lookup remains O(h).
+Mutating partner input would avoid copying but breaks caller-state safety. Retain deepcopy
+on cancellation and no mutation during estimates; regression tests protect both behaviors.
+Do not replace unknown travel times with zero: speed or convenience cannot justify false ETAs.
 
-## 3. Changes implemented
-- Change and reason:
-- Tests that protect correctness:
-- Measurement method and result (only if measured):
-
-## 4. Trade-offs
-Explain trade-offs involving clarity, correctness, performance, memory, or maintainability.
-
-## 5. Further improvements
-What would you do next with more time, and how would you validate it?
-
-If you made no optimization change, state that honestly and compare at least two reasonable options. Correctness and maintainability take priority over unnecessary complexity.
+## Future work
+Benchmark larger candidate pools before optimizing further. Add transactional capacity
+reservations and durable idempotency keys for concurrent dispatch, with integration tests
+for competing assignments. Add structured validation diagnostics if callers require more
+specific no-candidate reasons. No optional stretch item was implemented.
