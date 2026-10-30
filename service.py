@@ -66,6 +66,8 @@ def availability_reason(partner):
     """Return why a partner cannot take a new order, or None if available."""
     if not isinstance(partner,dict):
         return 'malformed partner record'
+    if not is_valid_id(partner.get('partner_id')):
+        return 'invalid partner_id'
     if partner.get('active') is not True:
         return 'inactive'
     capacity=partner.get('capacity')
