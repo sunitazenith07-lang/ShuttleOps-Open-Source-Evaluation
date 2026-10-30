@@ -53,4 +53,5 @@ Known limitations:
 - A missing `workload_minutes` defaults to zero for compatibility with the provided model; an explicitly malformed value makes the candidate ineligible.
 - If `minutes_by_order` for the cancelled order is malformed, the order is removed from `active_order_ids` but the workload is left unchanged because there is no trustworthy number to subtract. This is asserted by `test_cancellation_with_malformed_minutes_does_not_guess_workload`.
 - Cancellation deduplication is per partner record, matching the function signature; cross-partner event deduplication would require a shared event store.
+- Remote GitHub Actions: PR #3's upstream "Validation tests" run reported `action_required` because the workflow is awaiting maintainer approval. There is no remote green check to report at submission time; the local suite result is the evidence above.
 - No performance benchmark was run. The reported suite time is a test result, not a before/after optimisation claim.

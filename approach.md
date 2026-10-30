@@ -48,4 +48,5 @@ Alternatives rejected: treating missing travel as zero (violates the contract), 
 - Final command: `python -m pytest -q` → **241 passed in 0.21s**.
 - Final demo: `python -m main` → the same valid assignment `P-2`, pickup `13`, ETA `35`.
 - Verified edge cases include: no partners, all routes missing, negative/string/boolean/NaN/infinite travel, inactive/full/invalid-capacity partners, invalid `now`, invalid order identifiers, tied ETAs, duplicate cancellation IDs, and distinct cancellation IDs for the same order.
+- Remote check: PR #3 was opened against the original repository. Its upstream "Validation tests" workflow run reported `action_required` (awaiting maintainer approval), so no remote green check was available at submission time; the local suite was run directly.
 - Known limitations: a missing `workload_minutes` defaults to zero for backward compatibility with `new_partner`; if `minutes_by_order` contains a malformed value, the order is removed but the workload is left unchanged rather than guessing a number. Cancellation deduplication is per partner, matching the function's input shape.
