@@ -38,7 +38,7 @@ and dataset tests were added. Existing legitimate tests were not edited.
 | Dispatch-focused original/new tests, excluding cancellations | 216 passed, 47 deselected |
 | Cancellation-focused original/new tests | 71 passed, 151 deselected |
 | `python -m pytest -q tests/test_dataset_regressions.py` | 181 passed |
-| `python -m pytest -q` after integration | **469 passed in 0.48s**, zero failures/errors/skips |
+| `python -m pytest -q` at initial integration | **469 passed in 0.48s**, zero failures/errors/skips |
 | `python -m main` | Same validated demo result: P-2, pickup 13, ETA 35 |
 | `python -m compileall -q service.py models.py fixtures.py main.py tests` | Exit 0 |
 | `git diff --check` | Exit 0, no whitespace errors |
@@ -46,7 +46,7 @@ and dataset tests were added. Existing legitimate tests were not edited.
 No linter/type-checker is configured in `pyproject.toml` or the workflows. None
 was claimed as run. Test elapsed times above are observations, not benchmarks.
 
-CI uses Python 3.11. A separate local check used **Python 3.11.15**, pytest 9.2.0:
+CI uses Python 3.11. The initial submission also used **Python 3.11.15**, pytest 9.2.0:
 
 ```text
 uv venv --python <installed Python 3.11.15 executable> .venv
@@ -86,9 +86,10 @@ for example with `python -m pytest -q tests/test_cancellation_regressions.py -k 
 | Release greater than workload | Floor at zero | Zero | Original `test_cancellation_workload_never_goes_below_zero` |
 | Malformed cancellation state/missing release minutes | Leave state unchanged | Unchanged | `test_malformed_cancellation_state_is_not_changed` |
 
-New files: `tests/test_dispatch_regressions.py`,
+Initial submission files: `tests/test_dispatch_regressions.py`,
 `tests/test_cancellation_regressions.py`, `tests/test_dataset_regressions.py`.
-Together they add 240 cases to the 229 original cases.
+Together they added 240 cases to the 229 original cases. The follow-up adds
+31 more in `tests/test_explanations.py`, giving 500 cases in total.
 
 ## Large synthetic dataset
 
@@ -106,6 +107,47 @@ separate state/history tracking and checks caller input remains unchanged.
 Observed: 48 order releases, 9 duplicate IDs, 7 missing IDs and 113 valid new events
 for unknown/already-cancelled orders. Their sum is 177.
 
+## Follow-up audit and optional report validation
+
+Before follow-up changes, the clean PR-head checkout (`4a0d903`) passed all 469
+existing cases in 0.72s. The source and PR diff were reviewed against the Markdown
+rubric. No additional core defect was confirmed.
+
+A terminal-only seeded audit (Random seed 20261030) generated 1,000 snapshots with
+0-7 partners, active/full states, missing inbound routes, zero/fractional times
+and current-time offsets. A separate sorted reference calculation matched every
+result, including shuffled candidate lists. This was an exploratory check, not
+1,000 additional pytest cases or a load benchmark. Probes for NaN/infinite current
+time, huge integers, mixed numeric overflow and fractional cancellation passed.
+The numerical boundaries are also covered by focused pytest regressions below.
+
+| Command | Actual result after the report feature |
+|---|---|
+| `python -m pytest -q tests/test_explanations.py` | 31 passed in 0.34s |
+| `python -m pytest -q` | 500 passed in 0.83s |
+| `.venv/Scripts/python.exe -m pytest -q` | 500 passed in 0.88s (Python 3.11.15) |
+| `python -m main` | P-2, pickup 13, ETA 35, unchanged |
+| `python -m compileall -q service.py models.py fixtures.py main.py tests` | Exit 0 |
+| `git diff --check` | Exit 0 |
+
+No existing test was removed, changed, skipped or weakened. Syntax-tree comparison
+confirmed every pre-existing service function is unchanged. The wrapper is the
+only new production function; it is not invoked by normal assignments.
+
+| Added scenario | Expected and actual result | Test |
+|---|---|---|
+| Demo has eligible slower P-1 | Eligible True, selected False, higher-ETA reason; P-2 wins | `test_demo_explains_winner_and_higher_eta_without_changing_assignment` |
+| Inactive/full/invalid/missing-route candidate with valid fallback | Rejection preserved; fallback wins | `test_rejection_reason_is_retained_alongside_valid_winner` |
+| Malformed candidate before valid P | Rejected row retains index 0; P wins at index 1 | `test_malformed_candidate_keeps_its_input_index` |
+| Equal ETA across all six permutations | P-1 wins, others explain ID tie loss | `test_tie_explanation_and_winner_are_stable_across_permutations` |
+| Identical partner supplied twice | Exactly one selected row; later duplicate explained | `test_identical_duplicate_candidate_rows_select_only_first_row` |
+| All candidates rejected, or empty/invalid collection | No selected row; original assignment reason | `test_all_candidates_rejected_has_no_selected_row`, `test_empty_or_invalid_partner_collection_matches_existing_result` |
+| Invalid order/current time/travel or overflow | Each candidate has a safe rejection reason | `test_invalid_request_explains_every_candidate`, `test_invalid_travel_and_overflow_are_explained` |
+| Fractional time inputs | Pickup 1.25, ETA 2.0; input unchanged | `test_fractional_report_does_not_mutate_inputs` |
+| Every supplied dataset order | Removing candidates from report gives exact original assignment | `test_explanation_preserves_every_dataset_assignment` |
+| Huge integers then mixed float overflow | Exact integer ETA supported; unrepresentable mixed calculation rejected | `test_large_integer_eta_and_mixed_float_overflow_are_safe` |
+| Fractional cancellation (0.75 minus 0.25) and replay | Workload stays 0.5 after replay | `test_fractional_cancellation_remains_idempotent` |
+
 ## Limitations and rubric audit
 
 No known local failing tests remain. Hidden tests were not available. No load,
@@ -120,7 +162,7 @@ in `AI_USAGE.md`; published policy was preserved.
 | Codebase understanding and ETA trace (10) | Verified complete for documented inspection/trace | `approach.md`, worked demo, formula matrices |
 | Assignment and deterministic ties (20) | Verified complete against visible contract/tests | Eligibility matrices, permutation and 180-order oracle |
 | Edge safety, capacity and cancellation (20) | Verified complete against tested cases | Original/new safety matrices, 177-event oracle |
-| Regression tests and edge cases (15) | Verified complete locally | 469 passing cases on Python 3.14 and 3.11; originals intact |
+| Regression tests and edge cases (15) | Verified complete locally | 500 passing cases on Python 3.14 and 3.11; originals intact |
 | Code quality and maintainability (5) | Verified complete for local checks | Focused service changes, shared validation, no runtime dependency, compile/diff checks; examiner judgment remains |
 | Required problem-solving documents (15) | Verified complete | `approach.md`, `challenges.md`, `optimizations.md` completed from existing prompts |
 | PR, dispatch notes and live explanation (15) | Partially complete at documentation review | Notes/examples verified; PR/CI reported on GitHub and in final report; independent live explanation cannot be verified by automation |

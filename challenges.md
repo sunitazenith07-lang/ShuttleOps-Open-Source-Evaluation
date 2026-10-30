@@ -44,7 +44,7 @@ order would not protect against a reused event naming another order.
 `test_same_event_with_different_payload_is_ignored` checks B remains with workload
 6. The new cancellation file also covers invalid IDs/state, unknown orders,
 a new event for an already-cancelled order and unchanged caller input.
-The focused cancellation run passed 71 cases. The full suite passed 469,
+The focused cancellation run passed 71 cases. The initial submission suite passed 469,
 including the entire dataset stream; original tests are unchanged.
 
 ## 6. Unresolved challenge or next step
@@ -60,3 +60,21 @@ validation moved to an isolated virtual environment rather than overriding it.
 
 The published AI ban still conflicts with the user-reported verbal faculty
 exception. `AI_USAGE.md` preserves this discrepancy and its unverified source.
+
+## 7. Audit follow-up: eligibility is different from selection
+
+The optional report needed to keep an eligible but slower partner distinct from
+an ineligible partner. The demo provides an actual example: both P-2 and P-1 are
+eligible, but P-1 has ETA 36 against P-2's 35. The report keeps `eligible=True`
+for P-1 and marks `selected=False` with a higher-ETA explanation.
+
+The new tests also supply the same partner twice. Marking every matching ID as
+selected would give two apparent winners. The report instead marks the first
+matching row and explains the later row as an identical ID/ETA tie. Candidate
+indices keep malformed or duplicate rows identifiable. These were design cases
+and tests, not failures discovered in the existing assignment algorithm.
+
+`test_demo_explains_winner_and_higher_eta_without_changing_assignment` and
+`test_identical_duplicate_candidate_rows_select_only_first_row` passed, alongside
+permutation, malformed-input and dataset checks. Final local result: 500 passed
+on each tested Python version. No new core bug was confirmed in this audit.

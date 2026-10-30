@@ -68,7 +68,7 @@ scoped to the supplied partner. Inputs are not mutated.
 ## 5. Verification
 
 The first focused dispatch run passed 216 cases; focused cancellation passed 71.
-The integrated suite passed **469 tests**. The demo still reports pickup 13 and
+The initial submission suite passed **469 tests**. The demo still reports pickup 13 and
 ETA 35. Compilation and `git diff --check` passed. See `TESTING.md` for environments.
 
 An independent reference calculation checks all 180 dataset orders and reversed
@@ -77,3 +77,30 @@ Original tests and workflows are unchanged. Visible tests cannot prove every
 input correct. No route registry, concurrent reservation, durable event storage
 or optional batch/priority scheduling was added. Independent human review and
 live explanation remain necessary.
+
+## 6. Independent audit and optional candidate explanations
+
+A later review started from a clean `4a0d903` checkout and reran all 469 tests:
+469 passed in 0.72s. The current upstream brief and PR head were rechecked.
+A seeded audit of 1,000 dispatch snapshots, including fractional/zero times,
+matched separate reference arithmetic and shuffled partner inputs. Additional
+probes covered non-finite current times, 1,001-digit integer times, mixed numeric
+overflow and fractional cancellation. No additional core defect was confirmed.
+
+Individual rejection reasons already existed, but there was no complete report
+explaining why an eligible candidate lost. The one optional stretch feature is
+`explain_assignment(order, partners, travel, now=0)`. It returns the normal
+assignment fields plus a `candidates` list in input order. Each row includes an
+input index, the validated estimate, `selected` and a reason. Reasons distinguish
+ineligibility, higher ETA, lexicographic tie loss and identical duplicate rows.
+
+A separate wrapper was chosen instead of adding fields or flags to `assign_order`.
+It calls the existing decision/estimate functions; all pre-existing service
+functions were checked to have identical syntax trees. This avoids changing their
+interfaces or duplicating validation. It evaluates candidates a second time only
+when the report is requested. Neither other stretch feature was implemented.
+
+31 new regression cases pass. They include a compatibility check for every one of
+the 180 dataset orders, all six three-partner tie permutations and boundary probes.
+The final suite passed 500 cases on Python 3.14.6 and Python 3.11.15. The demo is
+unchanged. Hidden tests and independent human explanation remain unverified.

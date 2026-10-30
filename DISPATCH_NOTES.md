@@ -68,3 +68,34 @@ floors remaining workload at zero. Invalid events/state leave it unchanged;
 missing per-order minutes are not guessed. History is partner-local and must be
 retained by the caller. Persistence/concurrent reservations are not implemented.
 Human independent review/explanation remains necessary; see `AI_USAGE.md`.
+
+## 5. Optional complete candidate report
+
+Use the report only when its explanations are needed:
+
+```python
+from fixtures import sample_inputs
+from service import explain_assignment
+order, partners, travel = sample_inputs()
+report = explain_assignment(order, partners, travel)
+```
+
+The validated demo report keeps the assignment P-2/pickup 13/ETA 35 and adds:
+
+| Candidate index | Partner | Eligible | Selected | ETA | Reason |
+|---|---|---|---|---|---|
+| 0 | P-2 | True | True | 35 | selected by ETA and partner ID |
+| 1 | P-1 | True | False | 36 | higher ETA than selected partner |
+
+Rejected rows retain the specific `estimate_eta` reason. Equal ETA losers report
+that an earlier partner ID won. Identical ID/ETA duplicate rows select only the
+first supplied row; later duplicates say an earlier candidate was selected.
+`candidate_index` is zero-based and follows input order, including malformed rows.
+An empty or invalid partner collection produces an empty candidate list and the
+original assignment-level reason. No partner is selected when all are rejected.
+
+`test_explanation_preserves_every_dataset_assignment` checks report compatibility
+on all 180 orders. Default `assign_order` still returns exactly its original fields;
+no candidate list is added unless this separate function is called. Neither
+function reserves capacity. Reports use a stable caller-supplied snapshot and do
+not provide a concurrent or durable dispatch transaction.

@@ -22,6 +22,8 @@ a submission risk. Published-policy compliance must not be claimed as establishe
 | Repository brief, original tests, templates and synthetic data | Requirements and inputs | Read locally; upstream main verified; central guide returned 404 and bundled PDF has older rubric | Not applicable |
 
 Codex generated implementation changes, regression tests and submission documents.
+The follow-up audit and optional candidate-report function, tests and documentation
+updates were also performed by Codex under the same user-reported exception.
 Independent human review, understanding and live explanation have not been
 established by automated checks. Commit identity identifies the authorized account;
 it does not claim that all code/text was written without AI.

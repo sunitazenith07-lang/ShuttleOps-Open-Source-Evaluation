@@ -23,7 +23,7 @@ Validation precedes arithmetic and route-key construction. Cancellation rejects
 replayed IDs before releasing work, and removes a cancelled order's stale minutes
 entry. These improve correctness/clarity; no speed claim is made.
 Original matrices and new safety/dataset regressions protect the changes.
-The integrated suite passed 469 tests. No runtime dependency was added.
+The initial submission suite passed 469 tests. No runtime dependency was added.
 
 ## 4. Improvements investigated but rejected or deferred
 
@@ -43,3 +43,19 @@ If measured batch use justifies it, benchmark a running minimum and validated
 order context. Require identical winners, ETAs, rejection behaviour and unchanged
 inputs. Durable/global event tracking needs explicit retention, ownership and
 atomic-update rules first. These are future ideas, not implemented features.
+
+## 6. Optional report trade-off
+
+Implemented a separate `explain_assignment` wrapper. Ordinary assignments perform
+exactly the same work as before; reports intentionally call assignment and then
+estimate candidates again. This small extra pass reuses the validated rules and
+protects the existing return contract. Report rows require O(p) additional space,
+and the second validation pass has the same O(p*a) bound as normal estimation.
+
+An opt-in flag on `assign_order` or refactoring both paths into one new engine
+could avoid repeated work, but would change the existing function or its control
+flow. That compatibility risk was unnecessary for the supplied 60 partners.
+No timing benchmark or speedup is claimed. The final 500 passing cases include
+unchanged assignment fields for all 180 dataset orders. Only the candidate-report
+stretch feature was added; batching and preparation-change recalculation remain
+outside this submission.
