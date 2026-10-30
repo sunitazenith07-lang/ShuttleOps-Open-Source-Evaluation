@@ -112,3 +112,70 @@ def test_cancellation_does_not_mutate_input():
     p = loaded_partner()
     process_cancellation(p, 'A', 'C1')
     assert p == loaded_partner()
+
+
+@pytest.mark.parametrize('field,value', [
+    ('order_id', ''), ('order_id', None), ('order_id', '   '),
+    ('restaurant_id', ''), ('destination_zone', None),
+    ('prep_minutes', -1), ('prep_minutes', '5'), ('prep_minutes', None),
+])
+def test_invalid_order_is_rejected_with_reason(field, value):
+    bad = order()
+    bad[field] = value
+    result = assign_order(bad, [new_partner('P', 'Z')], TRAVEL)
+    assert result['partner_id'] is None
+    assert result['reason'] == f'order rejected: invalid {field}'
+
+
+def test_unknown_restaurant_is_unassigned():
+    result = assign_order(new_order('O', 'NOWHERE', 'D'), [new_partner('P', 'Z')], TRAVEL)
+    assert result['partner_id'] is None
+    assert 'P: missing travel time' in result['reason']
+
+
+@pytest.mark.parametrize('travel', [
+    {('Z', 'R'): -1, ('R', 'D'): 1},
+    {('Z', 'R'): 1, ('R', 'D'): -1},
+    {('Z', 'R'): '1', ('R', 'D'): 1},
+])
+def test_negative_or_non_numeric_travel_is_rejected(travel):
+    result = assign_order(order(), [new_partner('P', 'Z')], travel)
+    assert result['partner_id'] is None
+    assert 'P: invalid travel time' in result['reason']
+
+
+@pytest.mark.parametrize('now', [-1, '5', None, True])
+def test_invalid_current_time_is_rejected(now):
+    result = assign_order(order(), [new_partner('P', 'Z')], TRAVEL, now)
+    assert result['partner_id'] is None
+    assert 'P: invalid current time' in result['reason']
+
+
+def test_empty_partner_list_is_unassigned_with_reason():
+    result = assign_order(order(), [], TRAVEL)
+    assert result['partner_id'] is None
+    assert result['reason'] == 'no eligible partner (no partners supplied)'
+
+
+def test_empty_order_is_rejected():
+    result = assign_order({}, [new_partner('P', 'Z')], TRAVEL)
+    assert result['partner_id'] is None
+    assert result['reason'] == 'order rejected: invalid order_id'
+
+
+def test_result_is_independent_of_partner_order():
+    partners = []
+    for i, pid in enumerate(['P3', 'P1', 'P10', 'P2']):
+        p = new_partner(pid, 'Z')
+        p['workload_minutes'] = i % 2
+        partners.append(p)
+    first = assign_order(order(), partners, TRAVEL)
+    for shuffled in (partners[::-1], partners[1:] + partners[:1]):
+        assert assign_order(order(), shuffled, TRAVEL) == first
+
+
+def test_assign_order_does_not_mutate_inputs():
+    partners = [new_partner('P', 'Z')]
+    snapshot = deepcopy(partners)
+    assign_order(order(), partners, TRAVEL)
+    assert partners == snapshot
