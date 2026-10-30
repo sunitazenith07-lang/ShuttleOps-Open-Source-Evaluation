@@ -29,7 +29,7 @@
 
 
 ## Regression tests added
-tests/test_dispatch_regressions.py (36 test cases). Defects fixed:
+tests/test_dispatch_regressions.py (38 test cases). Defects fixed:
 - Missing validation of order fields, now and travel times (31 starter failures).
 - Inactive and at-capacity partners were assignable (18 failures).
 - Cancellation event IDs were recorded without being checked (16 failures).

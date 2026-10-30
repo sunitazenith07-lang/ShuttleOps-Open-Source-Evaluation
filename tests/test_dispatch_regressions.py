@@ -1,5 +1,5 @@
-import pytest
 from copy import deepcopy
+import pytest
 from models import new_order, new_partner
 from service import assign_order, compute_eta, estimate_eta, process_cancellation
 
