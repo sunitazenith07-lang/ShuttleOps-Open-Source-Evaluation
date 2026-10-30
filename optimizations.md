@@ -1,23 +1,35 @@
-# optimizations.md - Required submission
-
-Document optimizations you considered or implemented. Do not claim a speedup or improvement unless you measured it.
+﻿# optimizations.md - Required submission
 
 ## 1. Baseline and objective
-- What needed improvement (correctness, clarity, complexity, memory, repeated work, maintainability)?
-- What evidence suggested an improvement could help?
+- What needed improvement: correctness and robustness of partner eligibility, ETA validation, and cancellation idempotency.
+- Evidence: baseline `65 failed, 164 passed`; starter comments marked validation and duplicate-event handling as incomplete.
 
 ## 2. Options considered
-Describe each option's expected benefit and risk, including rejected ideas.
+1. Inline checks inside `estimate_eta` and `process_cancellation`.
+   - Benefit: fewer functions.
+   - Risk: duplicated bool/NaN/inf rules and inconsistent behaviour.
+2. Shared helper validators `_is_number`, `_valid_time`, `_valid_id`, `_valid_order` (chosen).
+   - Benefit: one definition of validity; easier to audit and test.
+   - Risk: small indirection.
+3. Treat missing travel as an infinite ETA instead of ineligible.
+   - Benefit: could still compare candidates.
+   - Risk: violates the contract that missing travel never contributes zero and cannot yield a reliable ETA.
+4. Mutate partner state in place during cancellation.
+   - Benefit: less allocation.
+   - Risk: side effects on caller inputs and harder regression testing; deepcopy is safer for these small records.
 
 ## 3. Changes implemented
-- Change and reason:
-- Tests that protect correctness:
-- Measurement method and result (only if measured):
+- Change and reason: added validators and guards in `estimate_eta`; capacity/active checks; strict travel validation; idempotent cancellation with coercion and clamping.
+- Tests that protect correctness: all 229 tests in `test_contract.py`, `test_edge_cases.py`, and `test_acceptance_matrix.py`.
+- Measurement method and result: no performance benchmark was run. Assignment remains O(number of partners); cancellation remains O(active orders) due to list removal.
 
 ## 4. Trade-offs
-Explain trade-offs involving clarity, correctness, performance, memory, or maintainability.
+- Strict validation rejects values that Python might otherwise coerce, such as `True` for capacity or `"2"` for travel time. This matches the contract and avoids silent incorrect ETAs.
+- `deepcopy` adds overhead, but partner records are small; correctness and input isolation are more important.
+- The validators use `math.isfinite`, which is slightly stricter than a simple `value is not None` check but prevents `NaN`/`inf` propagation.
 
 ## 5. Further improvements
-What would you do next with more time, and how would you validate it?
-
-If you made no optimization change, state that honestly and compare at least two reasonable options. Correctness and maintainability take priority over unnecessary complexity.
+- Distinguish rejection reasons in the result (invalid order vs. no eligible partner vs. missing route) for easier debugging.
+- Add a persistent, concurrency-safe cancellation event store if the service is used by multiple workers.
+- Exercise `data/records.json` through an integration test that converts travel rows to tuple keys and checks a sample of expected assignments.
+- Validate these improvements with the existing pytest suite plus new property-based tests for ETA monotonicity.
