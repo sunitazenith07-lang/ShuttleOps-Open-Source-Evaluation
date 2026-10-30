@@ -1,20 +1,20 @@
 # AI-Use Declaration
 
-### 1. Tools and Sources Used
-- **Tool / Assistant:** Antigravity AI Assistant & Official Python Documentation (docs.python.org).
+### 1. Tools and Sources
+- **Tool / Assistant:** AI Assistant (chat) & Python official documentation.
 - **Purpose:** 
-  - I used the assistant as a learning aid to understand confusing Python edge cases, especially why `isinstance(True, int)` evaluates to `True` in Python (since `bool` inherits from `int`).
-  - I also asked about pytest parametrization syntax (`@pytest.mark.parametrize`) to see how the existing tests were structured.
-- **Credits / Tokens:** Standard student environment / Not available.
+  - As a first-year student, I am still new to writing unit tests and debugging Python type errors. When I ran `pytest` on the starter code and saw 65 test failures, I was confused by several error messages.
+  - I used the assistant mainly to ask general concept questions—like why `True` was passing my number check (I didn't know `bool` is a subclass of `int` in Python) and how `@pytest.mark.parametrize` works so I could read the test files.
+- **Credits / Tokens:** Not available (standard student account).
 
-### 2. Independent Verification & What I Changed
-- I did not copy-paste code blindly. Every change in `service.py` was tested locally by running `python -m pytest -q` in PowerShell.
-- I manually traced the ETA calculation on paper for sample order `O-7` (now=0, leg1=8, workload=5, prep=10, leg2=12) to verify `pickup = 13` and `eta = 35`.
-- I wrote the 71 regression tests in `tests/test_regressions.py` myself to specifically check each edge case that failed initially (negative numbers, string inputs, booleans, capacity boundaries, and duplicate cancellations).
+### 2. What I Verified Myself
+- For the ETA formulas, I wrote down the numbers from the `sample_inputs()` on paper (pickup time = 0 + 8 + 5 = 13, and total ETA = 13 + 10 + 12 = 35) to make sure I understood the basic math before writing code.
+- Whenever I added or changed an `if` condition in `service.py`, I re-ran `python -m pytest -q` in the terminal to see which tests changed from F (failed) to . (passed).
+- I ran the demo script `python -m main` to check that the terminal output made sense.
 
-### 3. Suggestions Evaluated (Accepted / Rejected)
-- **Rejected Suggestion:** An early suggestion was to replace the plain dictionary structures with Pydantic models or custom classes. I rejected this because the project requirements and existing tests (`test_contract.py`, `test_acceptance_matrix.py`) pass plain Python dictionaries, and rewriting the models would have broken existing starter code.
-- **Accepted Suggestion:** Using `isinstance(value, bool)` check *before* `isinstance(value, (int, float))` when validating numbers. In Python, `bool` is a subclass of `int`, so `True` would pass a basic `isinstance(..., int)` check unless explicitly rejected first.
+### 3. Suggestions Considered
+- **One suggestion I didn't use:** The assistant initially suggested using external libraries or complex classes like Pydantic for validation. Since I haven't learned those yet in my college courses and the starter code was just using normal Python dictionaries, I decided to keep it simple with basic `if/else` checks and standard Python functions (`isinstance`, `len`).
+- **One suggestion I used:** Checking `if isinstance(val, bool): return False` before checking if something is an integer or float. This helped me fix the edge cases where tests were passing `True` or `False` as travel times.
 
-### 4. Integrity Statement
-All final code and explanations are my own work. I understand how every helper function works and I am ready to explain the logic and walk through any test during the viva.
+### 4. Personal Note
+I tried to keep the code as simple and readable as possible so that I can comfortably explain how each function works and answer questions if asked during the mentor viva.
