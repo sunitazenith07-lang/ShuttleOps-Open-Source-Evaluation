@@ -9,12 +9,13 @@ from copy import deepcopy
 
 def _is_valid_time(value):
     """A usable time value: int/float, not bool, finite, non-negative."""
-    return (
-        isinstance(value, (int, float))
-        and not isinstance(value, bool)
-        and math.isfinite(value)
-        and value >= 0
-    )
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(value) and value >= 0
+    except OverflowError:
+        # An int too large for a float is not a usable time.
+        return False
 
 
 def _is_valid_id(value):
@@ -104,8 +105,13 @@ def estimate_eta(order, partner, travel, now=0):
                 'reason': 'missing or invalid restaurant-to-customer travel time'}
 
     pickup = now + leg1 + partner.get('workload_minutes', 0)
+    eta = pickup + order.get('prep_minutes', 0) + leg2
+    if not _is_valid_time(eta):
+        # Finite inputs can still overflow to inf; that is not a reliable ETA.
+        return {'partner_id': partner_id, 'eta_minutes': None, 'eligible': False,
+                'reason': 'ETA out of range'}
     return {'partner_id': partner_id, 'pickup_minutes': pickup,
-            'eta_minutes': pickup + order.get('prep_minutes', 0) + leg2, 'eligible': True}
+            'eta_minutes': eta, 'eligible': True}
 
 
 def _evaluations(order, partners, travel, now=0):
@@ -201,13 +207,15 @@ def process_cancellation(partner, order_id, event_id):
     if not isinstance(partner, dict):
         return partner
     out = deepcopy(partner)
-    out.setdefault('processed_cancellation_ids', [])
-    if not isinstance(out['processed_cancellation_ids'], list):
-        out['processed_cancellation_ids'] = []
+    for key in ('processed_cancellation_ids', 'active_order_ids'):
+        if out.get(key) is None:
+            out[key] = []
+        elif not isinstance(out[key], list):
+            # Overwriting malformed state would erase real orders or event
+            # history (allowing a double release), so leave it untouched.
+            return out
     if event_id in out['processed_cancellation_ids']:
         return out
-    if not isinstance(out.get('active_order_ids'), list):
-        out['active_order_ids'] = []
     if order_id in out['active_order_ids']:
         out['active_order_ids'].remove(order_id)
         minutes_by_order = out.get('minutes_by_order')

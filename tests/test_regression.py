@@ -138,6 +138,37 @@ def test_eta_and_pickup_formula():
     assert result['eta_minutes'] == 37
 
 
+def test_eta_overflowing_to_infinity_is_not_assigned():
+    order = new_order('O', 'R', 'D', prep_minutes=1e308)
+    travel = {('Z', 'R'): 1e308, ('R', 'D'): 1e308}
+    assert estimate_eta(order, new_partner('P', 'Z'), travel)['eligible'] is False
+    result = assign_order(order, [new_partner('P', 'Z')], travel)
+    assert result['partner_id'] is None
+    assert result['eta_minutes'] is None
+
+
+@pytest.mark.parametrize('field', ['prep_minutes', 'leg', 'workload', 'now'])
+def test_int_too_large_for_float_is_rejected_without_crashing(field):
+    huge = 10 ** 400
+    order = new_order('O', 'R', 'D', huge if field == 'prep_minutes' else 1)
+    partner = new_partner('P', 'Z')
+    if field == 'workload':
+        partner['workload_minutes'] = huge
+    travel = {('Z', 'R'): huge if field == 'leg' else 1, ('R', 'D'): 1}
+    now = huge if field == 'now' else 0
+    assert estimate_eta(order, partner, travel, now)['eligible'] is False
+    assert assign_order(order, [partner], travel, now)['partner_id'] is None
+
+
+def test_cancellation_with_int_too_large_for_float_does_not_crash():
+    partner = new_partner('P', 'Z')
+    partner.update(active_order_ids=['O1'], workload_minutes=10 ** 400,
+                   minutes_by_order={'O1': 10 ** 400})
+    result = process_cancellation(partner, 'O1', 'C1')
+    assert result['active_order_ids'] == []
+    assert result['workload_minutes'] == 10 ** 400
+
+
 # --- Selection --------------------------------------------------------------
 
 def test_lowest_eta_wins_among_multiple_eligible_partners():
@@ -275,6 +306,33 @@ def test_cancellation_preserves_malformed_workload_instead_of_zeroing():
     # The malformed record must still be rejected for new assignments.
     assigned = assign_order(new_order('O', 'R', 'D'), [result], {('Z', 'R'): 1, ('R', 'D'): 1})
     assert assigned['partner_id'] is None
+
+
+def test_malformed_event_history_cannot_cause_double_release():
+    partner = new_partner('P', 'Z')
+    partner.update(active_order_ids=['O1'], workload_minutes=10,
+                   minutes_by_order={'O1': 10}, processed_cancellation_ids=('C1',))
+    result = process_cancellation(partner, 'O1', 'C1')
+    assert result['workload_minutes'] == 10
+    assert result['active_order_ids'] == ['O1']
+    assert result['processed_cancellation_ids'] == ('C1',)
+
+
+def test_malformed_active_orders_are_not_erased_by_cancellation():
+    partner = new_partner('P', 'Z')
+    partner.update(active_order_ids=('O1', 'O2'), workload_minutes=20,
+                   minutes_by_order={'O1': 10, 'O2': 10})
+    result = process_cancellation(partner, 'O1', 'C1')
+    assert result['active_order_ids'] == ('O1', 'O2')
+    assert result['workload_minutes'] == 20
+
+
+def test_missing_list_fields_still_default_to_empty_on_cancellation():
+    partner = {'partner_id': 'P', 'zone': 'Z', 'workload_minutes': 5}
+    result = process_cancellation(partner, 'O1', 'C1')
+    assert result['active_order_ids'] == []
+    assert result['processed_cancellation_ids'] == ['C1']
+    assert result['workload_minutes'] == 5
 
 
 def test_cancellation_does_not_mutate_original_partner():
