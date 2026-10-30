@@ -1,23 +1,28 @@
-# optimizations.md - Required submission
+# ⚙️ Optimizations and Trade-offs
 
-Document optimizations you considered or implemented. Do not claim a speedup or improvement unless you measured it.
+## Objective
 
-## 1. Baseline and objective
-- What needed improvement (correctness, clarity, complexity, memory, repeated work, maintainability)?
-- What evidence suggested an improvement could help?
+The measured issue was correctness: the starter test run had 65 failures and 164 passes. No performance benchmark was run, so no speedup is claimed.
 
-## 2. Options considered
-Describe each option's expected benefit and risk, including rejected ideas.
+## Options considered
 
-## 3. Changes implemented
-- Change and reason:
-- Tests that protect correctness:
-- Measurement method and result (only if measured):
+| Option | Benefit | Trade-off | Choice |
+|---|---|---|---|
+| Convert malformed values such as "10" into numbers | Could accept loosely formatted input | Hides malformed data and makes the input contract less predictable | Reject invalid values explicitly |
+| Sort every candidate by ETA | Produces a fully ordered candidate list | The service only needs the best candidate | Use min() with ETA and partner ID as the comparison key |
+| Mutate the original partner during cancellation | Avoids making a copy | Can create side effects for other code holding the same object | Keep the existing copy-and-return behavior with deepcopy() |
+| Add a more complex candidate-ranking structure | Could help at very large scale | Adds complexity without evidence of a bottleneck | Keep the simple candidate scan |
 
-## 4. Trade-offs
-Explain trade-offs involving clarity, correctness, performance, memory, or maintainability.
+## Changes that improve maintainability
 
-## 5. Further improvements
-What would you do next with more time, and how would you validate it?
+- A shared numeric validation helper keeps time checks consistent.
+- A dedicated capacity helper makes partner eligibility easier to read.
+- Cancellation event checking happens before any state change, making the idempotency rule explicit.
 
-If you made no optimization change, state that honestly and compare at least two reasonable options. Correctness and maintainability take priority over unnecessary complexity.
+Four regression cases were added in tests/test_regressions.py, including a route from the expanded dataset. The full visible suite reports 233 passed. These changes were not benchmarked for runtime or memory use.
+
+## Trade-offs and next steps
+
+The candidate scan is linear in the number of partners, and travel lookup uses the supplied mapping. This is straightforward for the current offline challenge. If real workload measurements later show a performance problem, profile representative inputs first and compare alternatives while preserving the correctness tests.
+
+No batch assignment, candidate explanation, or ETA recalculation stretch feature was implemented.

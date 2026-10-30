@@ -1,23 +1,26 @@
-# challenges.md - COMPULSORY submission
+# 🧩 Challenges and Debugging
 
-This file is mandatory and worth 5 marks. Describe your actual experience honestly. Do not invent difficulties to fill the page.
+## Main challenge
 
-## 1. Challenge or confusing behaviour
-What candidate-selection, ETA, capacity, missing-data, tie-breaking, or cancellation case was difficult to understand?
+The starter failures came from several related but separate gaps: invalid time values were not consistently rejected, partner eligibility and capacity were not checked, and cancellation events were not deduplicated.
 
-## 2. Evidence
-Summarize the relevant assertion, log, output, or minimal reproducible example.
+## Evidence and resolution
 
-## 3. What I tried
-List debugging steps or experiments you actually performed and what each one showed.
+| Evidence from the starter run | Root cause | Resolution |
+|---|---|---|
+| The suite reported 65 failures and 164 passes. Some invalid travel values were accepted; string values could raise TypeError. | ETA inputs were used in arithmetic without full validation. | Validate identifiers and finite, non-negative numeric inputs before calculating an ETA. |
+| Inactive and full partners could be selected. | Assignment considered an ETA without first checking partner status and remaining capacity. | Filter candidates by active status and valid available capacity before estimating ETA. |
+| Repeating a cancellation event did not check whether that event had already been processed. | The event ID was appended but not used to guard the state update. | Return the copied partner record unchanged when the event ID is already recorded. |
 
-## 4. Resolution
-What was the root cause? What did you change, and why did it address the cause rather than hide the symptom?
+## Investigation performed
 
-## 5. Proof and regression prevention
-Which test(s) demonstrate the fix? What related case might still break?
+1. Ran the visible test suite before editing to record the baseline.
+2. Read the failed assertions and traced them to estimate_eta(), assign_order(), and process_cancellation() in service.py.
+3. Updated the service logic, added regression tests in a new file, and left existing tests and CI unchanged.
+4. Re-ran the full visible suite and the offline demo.
 
-## 6. Unresolved challenge or next step
-State remaining limitations and how you would investigate them next.
+## Outcome and remaining work
 
-If you did not encounter a major blocker, say so honestly and describe the hardest edge case you deliberately tested and what it taught you. Do not manufacture a story.
+The final visible test run reported **233 passed**. The offline demo completed with the expected O-7 assignment and ETA. Four regression cases were added in tests/test_regressions.py; existing test files were not changed. They cover a duplicate cancellation ID with a different payload, huge integer time, malformed inputs, and a route converted from the expanded dataset.
+
+The pull-request CI result and hidden evaluation checks remain unverified. No major debugging obstacle beyond tracing the separate causes of the baseline failures was recorded.
