@@ -5,7 +5,7 @@ formula across zeros, typical values, high workload and larger time estimates.
 """
 import pytest
 from models import new_order, new_partner
-from service import estimate_eta
+from service import estimate_eta, assign_order
 
 
 @pytest.mark.parametrize("leg1,workload,prep,leg2,now", [
@@ -65,3 +65,21 @@ def test_eta_is_ineligible_when_either_required_route_is_missing(travel):
     result = estimate_eta(order, partner, travel)
     assert result["eligible"] is False
     assert result["eta_minutes"] is None
+
+
+def test_eta_rejects_missing_partner_id():
+    order = new_order("O", "R", "D")
+    partner = new_partner("PARTNER-001", "ZONE-A")
+    partner["partner_id"] = None
+    result = estimate_eta(order, partner, {("ZONE-A", "R"): 2, ("R", "D"): 3})
+    assert result["eligible"] is False
+    assert result["eta_minutes"] is None
+
+
+def test_assign_order_rejects_invalid_capacity_even_when_active():
+    order = new_order("O", "R", "D")
+    partner = new_partner("P", "Z")
+    partner["active"] = True
+    partner["capacity"] = 0
+    result = assign_order(order, [partner], {("Z", "R"): 1, ("R", "D"): 1})
+    assert result["partner_id"] is None
