@@ -28,11 +28,7 @@ Data is stored using simple Python dictionaries:
 
 ```mermaid
 flowchart LR
-    A[New Order] --> B{Valid?}
-    B -- Yes --> C[Filter Partners]
-    C --> D[Calculate ETAs]
-    D --> E[Pick Lowest ETA]
-    B -- No --> F[Reject Order]
+    A[Order] --> B[Validate] --> C[Filter Partners] --> D[Calculate ETA] --> E[Pick Lowest ETA]
 ```
 
 ## Three improvements suggested
