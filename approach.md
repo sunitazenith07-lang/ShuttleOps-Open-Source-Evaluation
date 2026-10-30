@@ -31,7 +31,7 @@ After implementation, I ran:
 
 python -m pytest -q
 
-The final reported result was 229 passed tests.
+The final reported result was 232 passed tests.
 
 The tests cover ETA calculations, missing routes, invalid inputs, capacity checks, tie-breaking, and cancellation idempotency.
 
