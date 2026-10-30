@@ -18,6 +18,13 @@ def assign_order(order, partners, travel, now=0):
     options=[]
     for partner in partners:
         # Starter is intentionally incomplete: active/capacity/time validation is missing.
+        if not partner.get('active', False):
+            continue
+
+        active_orders_count = len(partner.get('active_order_ids', []))
+        if active_orders_count >= partner.get('capacity', 0):
+            continue
+
         estimate=estimate_eta(order,partner,travel,now)
         if estimate['eligible']:
             options.append(estimate)
