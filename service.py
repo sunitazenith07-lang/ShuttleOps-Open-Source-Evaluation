@@ -123,17 +123,25 @@ def assign_order(order, partners, travel, now=0):
     }
 
 
+
 def process_cancellation(partner, order_id, event_id):
     if not isinstance(partner, dict):
         return partner
 
     out = deepcopy(partner)
 
-    out.setdefault("active_order_ids", [])
-    out.setdefault("processed_cancellation_ids", [])
-    out.setdefault("minutes_by_order", {})
+    if not isinstance(out.get("active_order_ids"), list):
+        out["active_order_ids"] = []
 
-    if event_id in out["processed_cancellation_ids"]:
+    if not isinstance(out.get("processed_cancellation_ids"), list):
+        out["processed_cancellation_ids"] = []
+
+    if not isinstance(out.get("minutes_by_order"), dict):
+        out["minutes_by_order"] = {}
+
+
+
+    if event_id is not None and event_id in out["processed_cancellation_ids"]:
         return out
 
     if order_id in out["active_order_ids"]:
@@ -147,6 +155,7 @@ def process_cancellation(partner, order_id, event_id):
 
         out["minutes_by_order"].pop(order_id, None)
 
-    out["processed_cancellation_ids"].append(event_id)
+    if event_id is not None:
+      out["processed_cancellation_ids"].append(event_id)
 
     return out
