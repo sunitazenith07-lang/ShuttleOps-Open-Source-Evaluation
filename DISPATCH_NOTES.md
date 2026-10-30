@@ -12,13 +12,13 @@ The demo returns `P-2`, pickup 13, ETA 35.
 
 ## No eligible partner example
 
-For an order from `R` to `D`, a full partner at capacity is excluded before ETA calculation. A second otherwise-active partner without `R -> D` travel data is also excluded. With no valid candidate, `assign_order` returns the order ID with `partner_id` and `eta_minutes` set to `None` and a reason explaining that no eligible partner or usable time data exists.
+For order `O` from `R` to `D`, `FULL` has capacity 1 and already has one active order, so it is excluded. `MISSING` is active but has only a `Y -> R` route; its required `R -> D` route is absent. The observed result is `{'order_id': 'O', 'partner_id': None, 'eta_minutes': None, 'reason': 'no eligible partner or missing time data'}`.
 
 ## Edge cases
 
-1. Missing travel data: a missing route yields no ETA, not a zero-minute route. Verified by `test_missing_travel_is_not_zero`.
-2. ETA tie: equal candidate ETAs select the lexicographically smaller partner ID regardless of list order. Verified by `test_tie_break_by_partner_id`.
-3. Duplicate cancellation: repeating the same event keeps one event ID and does not release workload again. Verified by `test_cancellation_records_once_and_does_not_mutate_input`.
+1. Missing travel data: input has no required route. Expected: no ETA and no assignment. Actual: `eta_minutes` and `partner_id` are `None`. Verified by `test_missing_travel_is_not_zero`.
+2. ETA tie: input places `B` before `A`, each with ETA 2. Expected: `A` by lexicographic tie-break. Actual: `A` was selected with pickup 1 and ETA 2. Verified by `test_tie_break_by_partner_id`.
+3. Duplicate cancellation: input cancels order `O` twice using event `C-1`; initial workload is 8 and the order accounts for 5 minutes. Expected: one event record and workload 3. Actual: `processed_cancellation_ids` is `['C-1']`, `active_order_ids` is empty, and workload is 3. Verified by `test_cancellation_records_once_and_does_not_mutate_input`.
 
 ## Assumptions and limitations
 
