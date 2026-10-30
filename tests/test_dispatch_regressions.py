@@ -179,3 +179,19 @@ def test_assign_order_does_not_mutate_inputs():
     snapshot = deepcopy(partners)
     assign_order(order(), partners, TRAVEL)
     assert partners == snapshot
+
+
+def test_invalid_partner_zone_is_excluded_not_a_crash():
+    p = new_partner('P', 'Z')
+    p['zone'] = ['Z']
+    result = assign_order(order(), [p], TRAVEL)
+    assert result['partner_id'] is None
+    assert 'P: invalid zone' in result['reason']
+
+
+def test_cancellations_without_event_id_are_each_applied():
+    once = process_cancellation(loaded_partner(), 'A', None)
+    twice = process_cancellation(once, 'B', None)
+    assert twice['active_order_ids'] == []
+    assert twice['workload_minutes'] == 0
+    assert twice['processed_cancellation_ids'] == []
