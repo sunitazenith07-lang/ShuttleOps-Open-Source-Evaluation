@@ -4,11 +4,11 @@ Complete this file in your own words. Be concise and specific to the work you ac
 
 ## 1. Baseline
 - Commands run before editing: `python -m pip install -r requirements-dev.txt`, `python -m pytest -q`, and `python -m main`
-- Initial test result (include the actual summary): `65 failed, 164 passed in 4.41s`
-- Demo/output observed: `python -m main` ran without crashing on the happy-path demo data, while `pytest` showed 65 failures in `test_acceptance_matrix.py` and `test_contract.py` due to missing input validation, capacity/activity checks, and duplicate cancellation handling in `service.py`.
+- Initial test result (include the actual summary): `65 failed, 164 passed `
+- Demo/output observed: `python -m main` ran without crashing, while `pytest` showed 65 failures in `test_acceptance_matrix.py` and `test_contract.py` due to missing input validation,activity checks, and duplicate cancellation handling in `service.py`.
 
 ## 2. Codebase understanding
-- Important files/functions inspected: `models.py` (`new_order`, `new_partner`), `fixtures.py`, `main.py`, `service.py` (`estimate_eta`, `assign_order`, `process_cancellation`), and the test files in `tests/` (`test_contract.py`, `test_edge_cases.py`, `test_acceptance_matrix.py`).
+- Important files/functions inspected: `models.py`, `new_order`, `new_partner`, `fixtures.py`, `main.py`, `service.py` ,`estimate_eta`, `assign_order`, `process_cancellation`, and the test files in `tests/` ,`test_contract.py`, `test_edge_cases.py`, `test_acceptance_matrix.py`.
 - Candidate filtering, ETA calculation, and capacity flow traced: `assign_order` loops over partners, calls `estimate_eta` (which calculates `pickup = now + leg1 + workload_minutes` and `eta_minutes = pickup + prep_minutes + leg2`), and picks the lowest ETA. The starter code was not checking `partner["active"]`, `len(active_order_ids) < capacity`, or validating negative/invalid inputs before doing math.
 - How you confirmed your understanding: Matched the `pytest` failure tracebacks (like `TypeError` on `service.py:9` when `now` was `'5'` or `None`, and `AssertionError: assert 'P' is None` when inactive or full partners were assigned) directly to the unguarded lines in `service.py`.
 
