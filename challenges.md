@@ -13,7 +13,7 @@ I ran the complete pytest suite, focused on failing contract tests, and ran the 
 The root cause was missing value-contract checks. I added finite non-negative numeric validation and explicit dictionary lookup. Duplicate cancellation now exits before mutation when its event ID is already processed.
 
 ## 5. Proof and regression prevention
-ETA matrices, route-missingness cases, capacity boundaries, and duplicate-cancellation tests now pass. Final result: 229 passed. Externally malformed dictionaries remain an area for further fuzz testing.
+ETA matrices, route-missingness cases, capacity boundaries, duplicate-cancellation tests, and four focused contract regressions now pass. Final result: 233 passed. Externally malformed dictionaries remain an area for further fuzz testing.
 
 ## 6. Unresolved challenge or next step
 No visible-suite failures remain. Future external integrations should add explicit record schemas. The next investigation would fuzz malformed nested dictionaries and verify no exceptions escape public service functions.

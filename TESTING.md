@@ -3,7 +3,7 @@
 ## Test command and environment
 - Python version: Python 3.14.7
 - Commands run: `./.venv/bin/python -m pytest -q`; `python3 -m main`
-- Actual test summary: 229 passed in 0.05s.
+- Actual test summary: 233 passed in 0.07s.
 
 ## Edge-case evidence
 
@@ -19,7 +19,7 @@
 | 8 | Cancellation of `UNKNOWN` | Existing workload and active orders remain unchanged | Workload unchanged | `test_cancellation_only_releases_present_order` |
 
 ## Regression tests added
-No repository tests were changed or weakened. Existing parameterized regressions cover partner eligibility, capacity, time validation, deterministic selection, route missingness, cancellation duplication, and workload floors.
+No repository tests were weakened. The existing parameterized regressions cover partner eligibility, capacity, time validation, deterministic selection, route missingness, cancellation duplication, and workload floors. Four focused regressions were added to cover invalid partner IDs, invalid workload, valid zero-duration routes, and non-mutating cancellation behavior in `tests/test_contract.py`.
 
 ## Remaining failures or limitations
 None are known in the visible suite. The suite does not exercise live GPS, database persistence, or third-party integrations; these are outside the simulated challenge.

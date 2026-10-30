@@ -48,3 +48,34 @@ def test_duplicate_cancellation_is_idempotent():
     p=new_partner('P','Z'); p.update(active_order_ids=['O1'],workload_minutes=9,minutes_by_order={'O1':9})
     once=process_cancellation(p,'O1','C1'); twice=process_cancellation(once,'O1','C1')
     assert twice['workload_minutes']==0 and twice['processed_cancellation_ids']==['C1']
+
+
+def test_partner_without_valid_id_cannot_be_estimated():
+    order=new_order('O','R','D')
+    partner=new_partner('', 'Z')
+    result=estimate_eta(order,partner,{('Z','R'):1,('R','D'):1})
+    assert result['eligible'] is False and result['eta_minutes'] is None
+
+
+def test_invalid_partner_workload_is_rejected():
+    order=new_order('O','R','D')
+    partner=new_partner('P','Z')
+    partner['workload_minutes']=-1
+    result=estimate_eta(order,partner,{('Z','R'):1,('R','D'):1})
+    assert result['eligible'] is False and result['eta_minutes'] is None
+
+
+def test_zero_duration_routes_are_valid():
+    order=new_order('O','R','D',0)
+    partner=new_partner('P','Z')
+    result=estimate_eta(order,partner,{('Z','R'):0,('R','D'):0})
+    assert result['eligible'] is True
+    assert result['pickup_minutes']==0 and result['eta_minutes']==0
+
+
+def test_cancellation_does_not_mutate_original_partner():
+    partner=new_partner('P','Z')
+    partner.update(active_order_ids=['O1'],workload_minutes=9,minutes_by_order={'O1':9})
+    result=process_cancellation(partner,'O1','C1')
+    assert partner['active_order_ids']==['O1'] and partner['workload_minutes']==9
+    assert result['active_order_ids']==[] and result['workload_minutes']==0

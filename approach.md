@@ -22,6 +22,6 @@
 
 ## 5. Verification
 - Existing parameterized tests were not weakened. The suite exercised 229 cases covering zeros, large values, invalid types, capacity boundaries, tie-breaking, missing routes, and repeated cancellations.
-- Final command: `./.venv/bin/python -m pytest -q` — 229 passed in 0.05s.
+- Final command: `./.venv/bin/python -m pytest -q` — 233 passed in 0.07s.
 - Final demo command: `python3 -m main` — produced the assigned sample result above.
 - No remaining visible-suite failures are known.
