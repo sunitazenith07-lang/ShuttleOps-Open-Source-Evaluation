@@ -2,79 +2,46 @@
 
 ## Project map
 
-Here is how the project files are organized and how they connect with each other:
+Here is how I understand the project files and how they fit together:
 
-- **`service.py`**: The heart of the project. It contains the core decision logic:
-  - `estimate_eta()`: Calculates pickup time and total delivery ETA for a single partner and order.
-  - `assign_order()`: Filters active and capable partners, runs ETA estimation for each, and picks the partner with the lowest ETA (with tie-breaking).
-  - `process_cancellation()`: Safely cancels an order, updates workload, and records event IDs idempotently.
-- **`models.py`**: Helper factory functions (`new_order()` and `new_partner()`) that return dictionaries representing orders and delivery partners.
-- **`fixtures.py`**: Provides sample inputs (`sample_inputs()`) with an order `O-7`, two partners `P-1` and `P-2`, and a small travel time dictionary.
-- **`main.py`**: A small script to run an offline demo of the assignment logic and print the output dictionary to the console.
-- **`data/records.json`**: An expanded synthetic dataset containing 180 orders, 60 partners, 387 travel time routes, and 177 cancellation events.
-- **`tests/`**: The automated test suite:
-  - `test_contract.py`: Basic contract and sanity checks.
-  - `test_acceptance_matrix.py`: 170 parametrized boundary and type validation checks.
-  - `test_edge_cases.py`: Extended ETA formula tests.
-  - `test_regressions.py`: 71 regression tests I wrote to lock in our fixes.
+- **`service.py`**: Where all the main logic lives:
+  - `estimate_eta()`: Does the math for pickup and total delivery time.
+  - `assign_order()`: Finds active partners, checks capacity, calculates ETAs, and picks the best one.
+  - `process_cancellation()`: Removes cancelled orders and updates workload without double-counting.
+- **`models.py`**: Simple helper functions (`new_order`, `new_partner`) that return Python dictionaries.
+- **`fixtures.py` & `main.py`**: A small sample order and two partners so we can run `python -m main` and see it work in the terminal.
+- **`tests/`**: Pytest files that check basic contract rules, all the boundary cases, and my regression tests (`test_regressions.py`).
 
 ---
 
 ## Data model
 
-The project represents data using native Python dictionaries:
+The project doesn't use classes or databases, just normal Python dictionaries:
 
-1. **Order Model (`dict`)**:
-   - `order_id` (`str`): Unique identifier for the order (e.g. `'O-7'`).
-   - `restaurant_id` (`str`): Identifier for the pickup location (e.g. `'R-2'`).
-   - `destination_zone` (`str`): Delivery drop-off zone (e.g. `'Z-9'`).
-   - `prep_minutes` (`int` or `float`): Estimated food preparation time (must be $\ge 0$).
-
-2. **Delivery Partner Model (`dict`)**:
-   - `partner_id` (`str`): Unique identifier for the driver/rider (e.g. `'P-2'`).
-   - `zone` (`str`): Current zone where the partner is located (e.g. `'Z-1'`).
-   - `active` (`bool`): `True` if the partner is currently online and ready for deliveries.
-   - `capacity` (`int`): Maximum number of concurrent active orders (default is 2).
-   - `active_order_ids` (`list` of `str`): List of orders currently in progress.
-   - `workload_minutes` (`int` or `float`): Remaining time required to finish existing orders.
-   - `minutes_by_order` (`dict`): Mapping of `order_id` to its assigned workload minutes.
-   - `processed_cancellation_ids` (`list` of `str`): History of cancellation event IDs already handled.
-
-3. **Travel Map (`dict`)**:
-   - Keys are 2-element tuples: `(origin_zone, destination_zone)`
-   - Values are `int` or `float` travel times in minutes (e.g. `{('Z-1', 'R-2'): 8}`).
+- **Order**: Has `order_id`, `restaurant_id`, `destination_zone`, and `prep_minutes`.
+- **Partner**: Has `partner_id`, `zone`, `active` (`True`/`False`), `capacity` (max orders they can take), `active_order_ids` (current orders), and `workload_minutes`.
+- **Travel Map**: A dictionary where the key is a tuple of two zones `(from_zone, to_zone)` and the value is the travel time in minutes.
 
 ---
 
 ## Data flow
 
-The flow when an order needs to be assigned (`assign_order`):
+When `assign_order()` is called:
 
-1. **Order Validation**: Validate that `order_id`, `restaurant_id`, and `destination_zone` are non-empty strings, and `prep_minutes` is a valid non-negative finite number. If invalid, return unassigned immediately.
-2. **Partner Eligibility Filter**: Loop through candidates and filter out partners where:
-   - `partner['active']` is not `True`
-   - `partner['capacity']` is not a valid positive integer
-   - `len(partner['active_order_ids']) >= partner['capacity']` (already at full capacity)
-3. **Route Lookup & ETA Estimation**: For each eligible candidate, look up both routes in the travel dictionary:
-   - Leg 1: `(partner.zone, order.restaurant_id)`
-   - Leg 2: `(order.restaurant_id, order.destination_zone)`
-   - If either route is missing or has invalid data (negative, string, bool, NaN, inf), the partner is marked `eligible=False`.
-4. **ETA Calculation**:
-   $$\text{pickup\_minutes} = \text{now} + \text{leg1} + \text{workload\_minutes}$$
-   $$\text{eta\_minutes} = \text{pickup\_minutes} + \text{prep\_minutes} + \text{leg2}$$
-5. **Selection & Tie-Breaking**:
-   - If no partners are eligible, return `partner_id: None` with explanation.
-   - Otherwise, pick the partner with the minimum `eta_minutes`.
-   - If two partners have the exact same ETA, break the tie by choosing the lexicographically smaller `partner_id` (alphabetical order).
+1. **Check Order**: Make sure order ID, restaurant ID, and destination zone exist, and prep time is $\ge 0$.
+2. **Filter Partners**: Skip anyone who is inactive (`active != True`) or already full (`len(active_order_ids) >= capacity`).
+3. **Check Routes**: For each remaining partner, look up travel to the restaurant (leg 1) and from the restaurant to the customer (leg 2). If either route is missing or negative, skip that partner.
+4. **Calculate ETA**:
+   - `pickup = now + leg1 + workload`
+   - `eta = pickup + prep + leg2`
+5. **Select Winner**: Pick the partner with the lowest ETA. If two partners have the same ETA, pick the one whose `partner_id` comes first alphabetically.
 
 ---
 
 ## Storage design
 
-- **In-Memory Dictionaries**: The system does not use an external database (like SQL or MongoDB) or disk files for live state. All state is held in Python memory.
-- **Pure Function & Immutability**:
-  - `estimate_eta` and `assign_order` do not mutate input objects.
-  - `process_cancellation` uses `deepcopy(partner)` to create a fresh copy of the partner dictionary before modifying `active_order_ids` and `workload_minutes`. This prevents side effects across different parts of the application.
+- Everything is kept in Python's memory while the program runs. There is no SQL database or file saving.
+- In `process_cancellation()`, we use `deepcopy()` to make a clean copy of the partner dictionary before editing their active orders and workload.
 
 ---
 
@@ -82,33 +49,20 @@ The flow when an order needs to be assigned (`assign_order`):
 
 ```mermaid
 flowchart TD
-    A["Order Received (assign_order)"] --> B{"Is Order Valid?"}
-    B -- "No" --> C["Return Unassigned (invalid order fields)"]
-    B -- "Yes" --> D["Loop Through Candidate Partners"]
-    
-    D --> E{"Is Partner Eligible?<br/>(active==True & active_orders < capacity)"}
-    E -- "No" --> D
-    E -- "Yes" --> F{"Are Leg 1 and Leg 2<br/>routes present and valid?"}
-    F -- "No" --> D
-    F -- "Yes" --> G["Calculate Pickup and Delivery ETA"]
-    G --> H["Add to Eligible Options List"]
-    H --> D
-    
-    D --> I{"Any Eligible Options?"}
-    I -- "No" --> J["Return Unassigned (no eligible partner)"]
-    I -- "Yes" --> K["Select Min ETA<br/>(Tie-break by partner_id)"]
-    K --> L["Return Assignment Result"]
+    A["Order Received"] --> B{"Valid Order?"}
+    B -- "No" --> C["Return: Invalid Order"]
+    B -- "Yes" --> D["Filter Partners (Active & Has Capacity)"]
+    D --> E["Lookup Routes & Calculate ETA"]
+    E --> F{"Any Eligible Partner?"}
+    F -- "No" --> G["Return: No Eligible Partner"]
+    F -- "Yes" --> H["Pick Lowest ETA (Tie-break by ID)"]
+    H --> I["Return Assigned Partner"]
 ```
 
 ---
 
 ## Three improvements suggested
 
-1. **Use Typed Data Classes instead of Dictionaries**:
-   Right now everything is stored in raw dictionaries (`partner['active']`), which requires writing lots of manual `isinstance()` and `None` checks. Using Python's `@dataclass` or `NamedTuple` with type hints would catch typos and invalid data earlier.
-
-2. **Index and Pre-Validate the Travel Map**:
-   Currently, we validate travel times on every single order lookup. If we pre-validated the travel dictionary once at startup and indexed routes (for example, grouping by origin zone), lookups would be faster and cleaner.
-
-3. **Support Batch Order Assignment**:
-   In real life, food delivery apps receive hundreds of orders at once. Right now, `assign_order()` only handles one order at a time. A great improvement would be a `batch_assign_orders()` function that assigns orders in priority order and updates each partner's capacity and workload after each assignment.
+1. **Use simple Python classes instead of dictionaries**: Right now, if you misspell a key like `partner['acitve']`, Python just returns `None` without warning. Basic classes would help catch typos.
+2. **Batch order assignment**: Right now the code only assigns one order at a time. It would be cool to support assigning a list of orders in priority order.
+3. **Check the travel table once at the start**: Instead of checking whether travel times are negative or strings during every single order lookup, we could validate the travel dictionary once when loading the data.
