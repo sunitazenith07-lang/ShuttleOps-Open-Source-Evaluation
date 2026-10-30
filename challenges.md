@@ -1,23 +1,41 @@
-# challenges.md - COMPULSORY submission
+Challenges — SmartDispatch
 
-This file is mandatory and worth 5 marks. Describe your actual experience honestly. Do not invent difficulties to fill the page.
+1. Challenge: Incomplete Dispatch Logic
 
-## 1. Challenge or confusing behaviour
-What candidate-selection, ETA, capacity, missing-data, tie-breaking, or cancellation case was difficult to understand?
+The starter implementation did not fully enforce partner eligibility and capacity requirements.
 
-## 2. Evidence
-Summarize the relevant assertion, log, output, or minimal reproducible example.
+Resolution: Added checks to ensure that only active partners with available capacity are considered.
 
-## 3. What I tried
-List debugging steps or experiments you actually performed and what each one showed.
+2. Challenge: Invalid and Missing Travel Data
 
-## 4. Resolution
-What was the root cause? What did you change, and why did it address the cause rather than hide the symptom?
+Missing routes and invalid travel-time values could lead to unreliable ETA calculations.
 
-## 5. Proof and regression prevention
-Which test(s) demonstrate the fix? What related case might still break?
+Resolution: Added validation for travel times and ensured missing or invalid route data makes a partner ineligible.
 
-## 6. Unresolved challenge or next step
-State remaining limitations and how you would investigate them next.
+3. Challenge: Deterministic Assignment
 
-If you did not encounter a major blocker, say so honestly and describe the hardest edge case you deliberately tested and what it taught you. Do not manufacture a story.
+Selecting the correct partner when multiple partners have the same ETA required consistent tie-breaking.
+
+Resolution: Selected the lowest ETA and used ascending partner ID as the tie-breaker.
+
+4. Challenge: Duplicate Cancellation Events
+
+Processing the same cancellation more than once could incorrectly reduce partner workload.
+
+Resolution: Added processed cancellation event tracking to make cancellation processing idempotent.
+
+5. Verification
+
+I initially ran the automated tests and observed 65 failures and 164 passing tests.
+
+After implementing the changes, I ran:
+
+python -m pytest -q
+
+The final reported result was 232 passed tests.
+
+6. Remaining Limitations
+
+* The system uses synthetic travel-time data.
+* Live traffic and GPS integration are not included.
+* Further integration testing with the expanded dataset should be reviewed.

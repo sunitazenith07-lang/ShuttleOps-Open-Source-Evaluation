@@ -168,3 +168,42 @@ def test_distinct_cancellation_events_recorded_once_each(event_id):
     result = process_cancellation(partner,"O",event_id)
     assert result["processed_cancellation_ids"] == [event_id]
     assert result["workload_minutes"] == 0
+
+def test_duplicate_event_id_with_different_order_payload():
+    partner = new_partner("P", "Z")
+    partner.update(
+        active_order_ids=["O1", "O2"],
+        workload_minutes=15,
+        minutes_by_order={"O1": 5, "O2": 10},
+    )
+
+    once = process_cancellation(partner, "O1", "C1")
+    twice = process_cancellation(once, "O2", "C1")
+
+    assert twice["active_order_ids"] == ["O2"]
+    assert twice["workload_minutes"] == 10
+    assert twice["minutes_by_order"] == {"O2": 10}
+
+def test_missing_event_id_does_not_release_workload_twice():
+    partner = new_partner("P", "Z")
+    partner.update(
+        active_order_ids=["O1"],
+        workload_minutes=10,
+        minutes_by_order={"O1": 10},
+    )
+
+    once = process_cancellation(partner, "O1", None)
+    twice = process_cancellation(once, "O1", None)
+
+    assert twice["active_order_ids"] == []
+    assert twice["workload_minutes"] == 0
+    assert twice["minutes_by_order"] == {}
+
+
+def test_malformed_cancellation_lists_are_handled_safely():
+    partner = new_partner("P", "Z")
+    partner["active_order_ids"] = None
+
+    result = process_cancellation(partner, "O1", "C1")
+
+    assert isinstance(result, dict)
