@@ -1,23 +1,29 @@
-# challenges.md - COMPULSORY submission
+# Challenges
 
-This file is mandatory and worth 5 marks. Describe your actual experience honestly. Do not invent difficulties to fill the page.
+1. **Environment setup.** macOS has no `python` command, only `python3`, and a
+   mistyped `python -m python -m pip` failed. Resolved by activating `.venv`, where
+   `python` works.
 
-## 1. Challenge or confusing behaviour
-What candidate-selection, ETA, capacity, missing-data, tie-breaking, or cancellation case was difficult to understand?
+2. **`bool` is an `int` in Python.** `isinstance(True, int)` is `True`, so `True`
+   passed as a time or capacity and behaved like `1`. `_is_valid_time` and
+   `_is_valid_capacity` now exclude `bool` explicitly. `nan` and `inf` needed
+   `math.isfinite`, because `nan >= 0` is `False` but `inf >= 0` is `True`.
 
-## 2. Evidence
-Summarize the relevant assertion, log, output, or minimal reproducible example.
+3. **Strict versus lenient `active` check.** The spec only says "active". The
+   acceptance matrix expects `False`, `0` and `None` to be inactive while truthy
+   values count as active, so the filter is `if not partner.get('active')`. A first
+   suggestion of `is True` was dropped for that reason.
 
-## 3. What I tried
-List debugging steps or experiments you actually performed and what each one showed.
+4. **Cancellation edge cases.** A replayed event must not release capacity twice, and
+   a cancellation for an order the partner does not hold must not corrupt workload.
+   Decision: check `event_id` first, release only if the order is in
+   `active_order_ids`, floor workload at 0, and still record the event ID so a replay
+   of an unknown-order event is also ignored.
 
-## 4. Resolution
-What was the root cause? What did you change, and why did it address the cause rather than hide the symptom?
+5. **Missing data versus zero.** The starter used `order.get('prep_minutes', 0)`,
+   which silently turned missing data into zero, the same mistake the spec forbids
+   for travel. The default was removed so a missing prep time is invalid.
 
-## 5. Proof and regression prevention
-Which test(s) demonstrate the fix? What related case might still break?
-
-## 6. Unresolved challenge or next step
-State remaining limitations and how you would investigate them next.
-
-If you did not encounter a major blocker, say so honestly and describe the hardest edge case you deliberately tested and what it taught you. Do not manufacture a story.
+6. **Diagnosing without the full source.** Early fixes were drafted from traceback
+   snippets. They were replaced by a version built on the real `service.py` once it
+   was available, keeping the original function names, signatures and return keys.
