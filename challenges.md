@@ -1,23 +1,77 @@
-# challenges.md - COMPULSORY submission
+# Challenges
 
-This file is mandatory and worth 5 marks. Describe your actual experience honestly. Do not invent difficulties to fill the page.
+## Challenge 1: Understanding the Root Cause of Multiple Failing Tests
 
-## 1. Challenge or confusing behaviour
-What candidate-selection, ETA, capacity, missing-data, tie-breaking, or cancellation case was difficult to understand?
+### Problem
+The initial test run produced:
+- 164 passed
+- 65 failed
 
-## 2. Evidence
-Summarize the relevant assertion, log, output, or minimal reproducible example.
+Failures appeared across several test categories, including travel-time validation, preparation-time validation, partner assignment, capacity handling, and cancellation processing.
 
-## 3. What I tried
-List debugging steps or experiments you actually performed and what each one showed.
+### Investigation
+I reviewed:
+- `service.py`
+- `tests/test_contract.py`
+- `tests/test_acceptance_matrix.py`
 
-## 4. Resolution
-What was the root cause? What did you change, and why did it address the cause rather than hide the symptom?
+I compared the expected test behaviour with the existing implementation.
 
-## 5. Proof and regression prevention
-Which test(s) demonstrate the fix? What related case might still break?
+### Evidence
+Examples of failing tests:
+- `test_invalid_or_missing_travel_time_rejected`
+- `test_preparation_time_validation`
+- `test_capacity_boundary_matrix`
+- `test_duplicate_cancellation_is_idempotent`
 
-## 6. Unresolved challenge or next step
-State remaining limitations and how you would investigate them next.
+### Resolution
+I found that `service.py` lacked validation logic for:
+- Order fields
+- Travel times
+- Preparation times
+- Partner activity
+- Partner capacity
 
-If you did not encounter a major blocker, say so honestly and describe the hardest edge case you deliberately tested and what it taught you. Do not manufacture a story.
+I added reusable validation helpers and updated the dispatch logic accordingly.
+
+---
+
+## Challenge 2: Duplicate Cancellation Handling
+
+### Problem
+Cancellation events were recorded even when the same event had already been processed.
+
+### Evidence
+The failing test showed:
+
+```text
+Expected:
+['C1']
+
+Actual:
+['C1', 'C1']
+```
+
+### Resolution
+I added a check for previously processed cancellation IDs before applying workload and active-order updates.
+
+This made cancellation processing idempotent, so processing the same cancellation more than once does not duplicate its effects.
+
+---
+
+## Challenge 3: Capacity Boundary Cases
+
+### Problem
+Partners at full capacity were still considered eligible for new assignments.
+
+### Investigation
+I reviewed the acceptance requirements and the capacity-related tests.
+
+### Resolution
+I added capacity validation and ensured that a partner is eligible only when:
+
+```text
+active_orders < capacity
+```
+
+A partner whose active-order count is equal to or greater than capacity is therefore excluded from assignment.
