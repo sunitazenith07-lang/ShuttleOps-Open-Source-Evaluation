@@ -1,23 +1,80 @@
-# challenges.md - COMPULSORY submission
-
-This file is mandatory and worth 5 marks. Describe your actual experience honestly. Do not invent difficulties to fill the page.
+# Challenges and debugging
 
 ## 1. Challenge or confusing behaviour
-What candidate-selection, ETA, capacity, missing-data, tie-breaking, or cancellation case was difficult to understand?
+
+The hardest investigated case was replaying a cancellation ID with a different
+order. The original duplicate test exposed repeated history; the broader defect
+could also release another order's capacity/workload. There was no prolonged
+algorithmic blocker. These are actual Codex-assisted investigations, not invented
+personal student experiences.
 
 ## 2. Evidence
-Summarize the relevant assertion, log, output, or minimal reproducible example.
 
-## 3. What I tried
-List debugging steps or experiments you actually performed and what each one showed.
+A partner had active A/B, workload 10, and minutes `{'A': 4, 'B': 6}`.
+Cancel A with event C: workload becomes 6. On the starter, replay C for B:
+B also disappears, workload becomes 0, and history becomes `['C', 'C']`.
+The function appended event IDs without checking them.
+
+Other starter probes found AttributeError for None order/partner, pickup -4 for
+workload -5, and a missing event ID releasing an order and recording None.
+
+## 3. What was tried
+
+1. Ran the untouched suite: 65 failed, 164 passed; read failing assertions/source.
+2. Ran the two-order replay directly; it demonstrated a real second release.
+3. Added safety regressions and ran them on the starter: 50 failed, 8 passed.
+4. Parsed the entire dataset. Seven events omit event_id; its edge catalog also
+   names differing-payload replays. Missing IDs therefore need an explicit rule.
+5. After fixing validation/replay handling, compared all 177 events with a separate
+   reference state model; every transition matched.
 
 ## 4. Resolution
-What was the root cause? What did you change, and why did it address the cause rather than hide the symptom?
+
+Check history before changing state. A seen event ID returns an unchanged copy,
+even if the payload names another order. For a valid first event, remove a present
+order once, subtract its recorded minutes with a zero floor, remove its minutes
+entry and record the event once.
+
+Unknown orders release nothing but their valid events are remembered. Invalid
+IDs/state or missing release minutes leave state unchanged. Deduplicating only by
+order would not protect against a reused event naming another order.
 
 ## 5. Proof and regression prevention
-Which test(s) demonstrate the fix? What related case might still break?
+
+`test_same_event_with_different_payload_is_ignored` checks B remains with workload
+6. The new cancellation file also covers invalid IDs/state, unknown orders,
+a new event for an already-cancelled order and unchanged caller input.
+The focused cancellation run passed 71 cases. The initial submission suite passed 469,
+including the entire dataset stream; original tests are unchanged.
 
 ## 6. Unresolved challenge or next step
-State remaining limitations and how you would investigate them next.
 
-If you did not encounter a major blocker, say so honestly and describe the hardest edge case you deliberately tested and what it taught you. Do not manufacture a story.
+History must be retained by the caller. Cross-partner, restart and concurrent
+deduplication need a storage/atomic-update contract beyond this exercise.
+
+Environment work also required care: normal CLI login rejected the existing token
+for missing read:org, while a temporary GH_TOKEN using the same Git credential
+authenticated MAD1IZJOD and created the fork. No token was committed. Installing
+dependencies directly into uv's Python 3.11 was refused as externally managed;
+validation moved to an isolated virtual environment rather than overriding it.
+
+The published AI ban still conflicts with the user-reported verbal faculty
+exception. `AI_USAGE.md` preserves this discrepancy and its unverified source.
+
+## 7. Audit follow-up: eligibility is different from selection
+
+The optional report needed to keep an eligible but slower partner distinct from
+an ineligible partner. The demo provides an actual example: both P-2 and P-1 are
+eligible, but P-1 has ETA 36 against P-2's 35. The report keeps `eligible=True`
+for P-1 and marks `selected=False` with a higher-ETA explanation.
+
+The new tests also supply the same partner twice. Marking every matching ID as
+selected would give two apparent winners. The report instead marks the first
+matching row and explains the later row as an identical ID/ETA tie. Candidate
+indices keep malformed or duplicate rows identifiable. These were design cases
+and tests, not failures discovered in the existing assignment algorithm.
+
+`test_demo_explains_winner_and_higher_eta_without_changing_assignment` and
+`test_identical_duplicate_candidate_rows_select_only_first_row` passed, alongside
+permutation, malformed-input and dataset checks. Final local result: 500 passed
+on each tested Python version. No new core bug was confirmed in this audit.
