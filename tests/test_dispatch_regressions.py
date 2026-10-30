@@ -1,4 +1,5 @@
 import pytest
+from copy import deepcopy
 from models import new_order, new_partner
 from service import assign_order, compute_eta, estimate_eta, process_cancellation
 
@@ -70,3 +71,44 @@ def test_no_eligible_partner_reports_each_reason():
     assert result['reason'] == (
         'no eligible partner (P1: inactive; P2: at capacity; P3: missing travel time)'
     )
+
+
+def loaded_partner():
+    p = new_partner('P', 'Z')
+    p.update(active_order_ids=['A', 'B'], workload_minutes=30, minutes_by_order={'A': 10, 'B': 20})
+    return p
+
+
+def test_duplicate_cancellation_releases_once():
+    once = process_cancellation(loaded_partner(), 'A', 'C1')
+    twice = process_cancellation(once, 'A', 'C1')
+    assert once['active_order_ids'] == ['B']
+    assert once['workload_minutes'] == 20
+    assert twice == once
+
+
+def test_same_event_id_for_another_order_is_ignored():
+    once = process_cancellation(loaded_partner(), 'A', 'C1')
+    result = process_cancellation(once, 'B', 'C1')
+    assert result['active_order_ids'] == ['B']
+    assert result['workload_minutes'] == 20
+
+
+def test_cancellation_workload_never_negative():
+    p = loaded_partner()
+    p['workload_minutes'] = 5
+    result = process_cancellation(p, 'B', 'C1')
+    assert result['workload_minutes'] == 0
+
+
+@pytest.mark.parametrize('order_id', ['UNKNOWN', None, ''])
+def test_cancelling_unknown_order_changes_nothing(order_id):
+    result = process_cancellation(loaded_partner(), order_id, 'C1')
+    assert result['active_order_ids'] == ['A', 'B']
+    assert result['workload_minutes'] == 30
+
+
+def test_cancellation_does_not_mutate_input():
+    p = loaded_partner()
+    process_cancellation(p, 'A', 'C1')
+    assert p == loaded_partner()
