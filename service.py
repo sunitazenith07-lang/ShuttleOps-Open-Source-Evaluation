@@ -45,11 +45,35 @@ def estimate_eta(order, partner, travel, now=0):
     return {'partner_id':partner.get('partner_id'),'pickup_minutes':pickup,'eta_minutes':pickup+order.get('prep_minutes',0)+leg2,'eligible':True}
 
 
+def is_valid_capacity(value):
+    """True for a whole number of order slots, at least 1 (bool is not a count)."""
+    return isinstance(value,int) and not isinstance(value,bool) and value>=1
+
+
+def availability_reason(partner):
+    """Return why a partner cannot take a new order, or None if available."""
+    if not isinstance(partner,dict):
+        return 'malformed partner record'
+    if partner.get('active') is not True:
+        return 'inactive'
+    capacity=partner.get('capacity')
+    if not is_valid_capacity(capacity):
+        return 'invalid capacity'
+    current=partner.get('active_order_ids')
+    if not isinstance(current,list):
+        return 'invalid active_order_ids'
+    if len(current)>=capacity:
+        return 'at capacity'
+    return None
+
+
 def assign_order(order, partners, travel, now=0):
     options=[]
     for partner in partners:
-        # Starter is intentionally incomplete: active/capacity/time validation is missing.
+        if availability_reason(partner) is not None:
+            continue
         estimate=estimate_eta(order,partner,travel,now)
+
         if estimate['eligible']:
             options.append(estimate)
     if not options:
