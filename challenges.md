@@ -1,23 +1,22 @@
-# challenges.md - COMPULSORY submission
-
-This file is mandatory and worth 5 marks. Describe your actual experience honestly. Do not invent difficulties to fill the page.
+# Challenges and evidence
 
 ## 1. Challenge or confusing behaviour
-What candidate-selection, ETA, capacity, missing-data, tie-breaking, or cancellation case was difficult to understand?
+The most important edge case was distinguishing an actually missing route from a route whose value is invalid. The starter checked only for `None`, so negative, string, Boolean and non-finite travel values could reach the ETA calculation. Partner eligibility and cancellation-event deduplication were also absent.
 
 ## 2. Evidence
-Summarize the relevant assertion, log, output, or minimal reproducible example.
+The initial visible suite reported **65 failed, 164 passed**. Failures included `test_invalid_or_missing_travel_time_rejected`, `test_inactive_partners_never_selected`, `test_capacity_boundary_matrix` and `test_duplicate_cancellation_is_idempotent_across_workloads`.
 
 ## 3. What I tried
-List debugging steps or experiments you actually performed and what each one showed.
+- Read the task's required behavior and the failing assertions before changing the service.
+- Ran `python -m pytest -q`; this environment had no `python` command, so I used `python3`.
+- Ran the baseline suite with `python3 -m pytest -q --tb=no` to capture a concise failure summary, and ran the offline demo.
+- After the changes, reran the full suite and the demo; I also ran a full-capacity/missing-route example.
 
 ## 4. Resolution
-What was the root cause? What did you change, and why did it address the cause rather than hide the symptom?
+Added shared checks for non-empty string identifiers and non-negative finite numeric times. Dispatch now filters inactive and full partners before estimating an ETA. Cancellation processing now checks the processed-event list before releasing workload and preserves the caller's original partner object by working on a deep copy.
 
 ## 5. Proof and regression prevention
-Which test(s) demonstrate the fix? What related case might still break?
+The final suite passed: **235 passed**. Existing matrix/contract tests cover invalid time values, capacity, tie-breaking and repeated cancellations. `tests/test_regressions.py` adds malformed-record, overflow and input-immutability cases.
 
 ## 6. Unresolved challenge or next step
-State remaining limitations and how you would investigate them next.
-
-If you did not encounter a major blocker, say so honestly and describe the hardest edge case you deliberately tested and what it taught you. Do not manufacture a story.
+Cancellation deduplication is stored in each partner record, so it depends on that state being persisted by the caller between events. This repository has no persistence layer to test. The cancellation handler raises an explicit error if its state-list shape is malformed; a production integration should define how such corrupt persisted state is surfaced and repaired.
