@@ -22,6 +22,7 @@
 
 ## 5. Verification
 - Tests added: `tests/test_regression.py` (eligibility, travel validation, order/partner malformation, ETA formula, tie-break determinism, cancellation edge cases, stretch feature) and `tests/test_dataset.py` (tuple-key conversion, deterministic replay of all 180 orders, idempotent replay of all 177 cancellations).
-- Commands run and actual results: `python -m pytest -q` → **274 passed** (was 65 failed / 164 passed); `python -m main` → same correct output as baseline.
+- Commands run and actual results: `python -m pytest -q` → **279 passed** (was 65 failed / 164 passed); `python -m main` → same correct output as baseline.
 - Edge cases verified: all 15 required categories plus dataset replay (see TESTING.md).
+- Post-implementation audit fixes (each with a regression test that fails on the earlier code and passes now): (1) an unhashable `order_id` crashed `process_cancellation` with `TypeError` → the `minutes_by_order.pop` is now guarded; (2) a malformed `workload_minutes` such as `'20'` was silently reset to 0 during cancellation → it is now left unchanged; (3) unassigned results omitted `pickup_minutes` → every result now carries the same five keys. The contract tests do not fix the unassigned key set, so adding `pickup_minutes: None` was a compatible change.
 - Remaining failures: none. Known limitation: an `event_id`-less cancellation is deduplicated per partner, so a second distinct ID-less event on the same partner is ignored (documented assumption).

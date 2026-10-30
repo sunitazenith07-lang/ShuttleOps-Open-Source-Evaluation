@@ -177,6 +177,25 @@ def _demo_inputs():
     return order, [p1, p2], travel
 
 
+RESULT_KEYS = {'order_id', 'partner_id', 'pickup_minutes', 'eta_minutes', 'reason'}
+
+
+@pytest.mark.parametrize('order,partners', [
+    (new_order('O', 'R', 'D'), [new_partner('P', 'Z')]),
+    (new_order('O', 'R', 'D'), []),
+    (new_order('', 'R', 'D'), [new_partner('P', 'Z')]),
+])
+def test_assigned_and_unassigned_results_share_one_schema(order, partners):
+    result = assign_order(order, partners, {('Z', 'R'): 1, ('R', 'D'): 1})
+    assert set(result) == RESULT_KEYS
+    if result['partner_id'] is None:
+        assert result['pickup_minutes'] is None
+        assert result['eta_minutes'] is None
+        assert result['reason'] != 'assigned'
+    else:
+        assert result['reason'] == 'assigned'
+
+
 def test_demo_fixture_assigns_p2_with_eta_35():
     order, partners, travel = _demo_inputs()
     result = assign_order(order, partners, travel)
@@ -233,6 +252,29 @@ def test_cancellation_keeps_minutes_by_order_consistent():
     result = process_cancellation(partner, 'O1', 'C1')
     assert result['minutes_by_order'] == {'O2': 6}
     assert result['workload_minutes'] == 6
+
+
+def test_cancellation_with_unhashable_order_id_is_safe():
+    partner = new_partner('P', 'Z')
+    partner.update(active_order_ids=[['LIST-ID']], workload_minutes=10,
+                   minutes_by_order={})
+    result = process_cancellation(partner, ['LIST-ID'], 'C1')
+    assert result['active_order_ids'] == []
+    assert result['workload_minutes'] == 10
+    assert result['processed_cancellation_ids'] == ['C1']
+
+
+def test_cancellation_preserves_malformed_workload_instead_of_zeroing():
+    partner = new_partner('P', 'Z')
+    partner.update(active_order_ids=['O1'], workload_minutes='20',
+                   minutes_by_order={'O1': 10})
+    result = process_cancellation(partner, 'O1', 'C1')
+    assert result['workload_minutes'] == '20'
+    assert result['active_order_ids'] == []
+    assert result['processed_cancellation_ids'] == ['C1']
+    # The malformed record must still be rejected for new assignments.
+    assigned = assign_order(new_order('O', 'R', 'D'), [result], {('Z', 'R'): 1, ('R', 'D'): 1})
+    assert assigned['partner_id'] is None
 
 
 def test_cancellation_does_not_mutate_original_partner():

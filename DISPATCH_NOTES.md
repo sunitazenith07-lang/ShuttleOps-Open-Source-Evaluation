@@ -17,7 +17,7 @@ From `fixtures.py` (also the `python -m main` demo):
 Order `O` (`R` → `D`) with partners `OFF` (active=False), `FULL` (capacity=1, already has `BUSY`), `NOROUTE` (zone `Z4`, no `Z4→R` travel row):
 
 - `OFF` → `partner inactive`; `FULL` → `partner at capacity`; `NOROUTE` → `missing or invalid partner-to-restaurant travel time`.
-- Result: `{'order_id': 'O', 'partner_id': None, 'eta_minutes': None, 'reason': 'no eligible partner: missing or invalid partner-to-restaurant travel time (1), partner at capacity (1), partner inactive (1)'}`
+- Result: `{'order_id': 'O', 'partner_id': None, 'pickup_minutes': None, 'eta_minutes': None, 'reason': 'no eligible partner: missing or invalid partner-to-restaurant travel time (1), partner at capacity (1), partner inactive (1)'}`
 - The order stays unassigned — an invalid candidate is never forced. Verified by `test_explain_assignment_reports_each_candidate` and the all-inactive/all-full tests.
 
 ## 3. Three edge cases
@@ -31,5 +31,6 @@ Order `O` (`R` → `D`) with partners `OFF` (active=False), `FULL` (capacity=1, 
 - **Workload model**: `workload_minutes` is the total remaining committed work; it delays pickup directly. `minutes_by_order[order_id]` is the per-order release amount used by cancellation.
 - **Tie-breaking**: lowest `eta_minutes`, then ascending lexicographic `partner_id` (`min` on `(eta, str(partner_id))`); deterministic and independent of input order.
 - **Strict records**: `active` must be `True`; `capacity` an `int >= 1` (bool/0/negative/float rejected); times must be finite non-negative numbers; IDs must be non-empty strings. Missing `active_order_ids`/`workload_minutes` default to `[]`/`0`; present-but-malformed rejects the partner.
-- **Cancellation idempotency**: `event_id` already in `processed_cancellation_ids` → no-op. Workload floors at 0. Unknown orders are recorded but release nothing. **Limitation**: events with no `event_id` (7 exist in `records.json`, all duplicates) are deduplicated per partner — only the first ID-less event applies; a second distinct ID-less event would be ignored.
+- **Cancellation idempotency**: `event_id` already in `processed_cancellation_ids` → no-op. A valid workload floors at 0; a malformed workload (e.g. the string `'20'`) is left unchanged rather than silently coerced to 0, and the partner stays ineligible until the record is fixed. Unknown orders are recorded but release nothing.
+- **Result schema**: every `assign_order` result has the same five keys — `order_id`, `partner_id`, `pickup_minutes`, `eta_minutes`, `reason`. When unassigned, `partner_id`, `pickup_minutes` and `eta_minutes` are `None`. **Limitation**: events with no `event_id` (7 exist in `records.json`, all duplicates) are deduplicated per partner — only the first ID-less event applies; a second distinct ID-less event would be ignored.
 - `explain_assignment` evaluates partners twice (once for the decision, once for the report) — a deliberate readability trade-off.

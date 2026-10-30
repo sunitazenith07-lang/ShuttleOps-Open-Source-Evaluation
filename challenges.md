@@ -19,7 +19,7 @@ Two real difficulties: (a) deciding the correct semantics for duplicate cancella
 - Strictness ambiguity resolved by treating non-conforming values as malformed input (reject), consistent with "do not silently convert invalid data into valid-looking values".
 
 ## 5. Proof and regression prevention
-- `test_duplicate_cancellation_is_idempotent_across_workloads` (15 cases), `test_duplicate_cancellation_is_idempotent`, `test_duplicate_event_id_with_different_order_still_ignored`, `test_full_cancellation_stream_replay_is_idempotent` (dataset replay) and `test_duplicate_event_ids_in_dataset_do_not_double_release` all pass: 274 total.
+- `test_duplicate_cancellation_is_idempotent_across_workloads` (15 cases), `test_duplicate_cancellation_is_idempotent`, `test_duplicate_event_id_with_different_order_still_ignored`, `test_full_cancellation_stream_replay_is_idempotent` (dataset replay) and `test_duplicate_event_ids_in_dataset_do_not_double_release` all pass: 279 total.
 - Related case that could still break: if a future spec allows multiple distinct ID-less cancellation events per partner, the `None`-dedup assumption must be revisited.
 
 ## 6. Unresolved challenge or next step

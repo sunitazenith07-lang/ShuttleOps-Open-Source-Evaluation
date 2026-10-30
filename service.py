@@ -73,6 +73,10 @@ def estimate_eta(order, partner, travel, now=0):
     Returns a dict with partner_id, eligible and eta_minutes. When eligible it
     also contains pickup_minutes; when not, eta_minutes is None and reason
     explains why. Missing travel data is never treated as zero.
+
+    Note: this only measures time feasibility. Dispatch-level checks
+    (partner_id validity, active flag, capacity) live in _partner_problem,
+    which assign_order applies before trusting any estimate.
     """
     partner_id = partner.get('partner_id') if isinstance(partner, dict) else None
     problem = _order_problem(order)
@@ -157,8 +161,8 @@ def assign_order(order, partners, travel, now=0):
     order_id = order.get('order_id') if isinstance(order, dict) else None
     order_problem = _order_problem(order)
     if order_problem is not None:
-        return {'order_id': order_id, 'partner_id': None, 'eta_minutes': None,
-                'reason': 'invalid order: ' + order_problem}
+        return {'order_id': order_id, 'partner_id': None, 'pickup_minutes': None,
+                'eta_minutes': None, 'reason': 'invalid order: ' + order_problem}
     candidates, rejection_counts = evaluate_candidates(order, partners, travel, now)
     if not candidates:
         if rejection_counts:
@@ -166,7 +170,8 @@ def assign_order(order, partners, travel, now=0):
             reason = 'no eligible partner: ' + detail
         else:
             reason = 'no partners available'
-        return {'order_id': order_id, 'partner_id': None, 'eta_minutes': None, 'reason': reason}
+        return {'order_id': order_id, 'partner_id': None, 'pickup_minutes': None,
+                'eta_minutes': None, 'reason': reason}
     chosen = min(candidates, key=lambda item: (item['eta_minutes'], str(item['partner_id'])))
     return {'order_id': order_id, 'partner_id': chosen['partner_id'],
             'pickup_minutes': chosen['pickup_minutes'], 'eta_minutes': chosen['eta_minutes'],
@@ -189,8 +194,9 @@ def process_cancellation(partner, order_id, event_id):
     """Apply a cancellation event to a copy of the partner record.
 
     Idempotent: an event_id already in processed_cancellation_ids is ignored,
-    so a duplicated event cannot release workload twice. Workload never goes
-    below zero; unknown orders are recorded but change nothing.
+    so a duplicated event cannot release workload twice. Valid workload never
+    goes below zero; a malformed workload is preserved, not coerced. Unknown
+    orders are recorded but change nothing.
     """
     if not isinstance(partner, dict):
         return partner
@@ -205,14 +211,19 @@ def process_cancellation(partner, order_id, event_id):
     if order_id in out['active_order_ids']:
         out['active_order_ids'].remove(order_id)
         minutes_by_order = out.get('minutes_by_order')
-        release = minutes_by_order.get(order_id, 0) if isinstance(minutes_by_order, dict) else 0
+        release = 0
+        if isinstance(minutes_by_order, dict):
+            try:
+                release = minutes_by_order.pop(order_id, 0)
+            except TypeError:
+                # Unhashable order_id can never be a dict key; release nothing.
+                release = 0
         if not _is_valid_time(release):
             release = 0
         current = out.get('workload_minutes', 0)
-        if not _is_valid_time(current):
-            current = 0
-        out['workload_minutes'] = max(0, current - release)
-        if isinstance(minutes_by_order, dict):
-            minutes_by_order.pop(order_id, None)
+        # A malformed workload is left as-is rather than coerced to 0; the
+        # partner stays ineligible via _partner_problem until it is corrected.
+        if _is_valid_time(current):
+            out['workload_minutes'] = max(0, current - release)
     out['processed_cancellation_ids'].append(event_id)
     return out

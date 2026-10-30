@@ -1,8 +1,8 @@
 # optimizations.md - Required submission
 
 ## 1. Baseline and objective
-- Goal was correctness first; performance was a secondary check. Measured on the full dataset (Python 3.14.3, `time.perf_counter`): **180 `assign_order` calls over 60 partners = 0.033 s (~183 µs/order)**; **177 `process_cancellation` calls = 0.001 s**. At this scale no hotspot exists; the work was already cheap.
-- Evidence: `python -m pytest -q` completes 274 tests in ~0.45 s; the dataset replay script above produced the timings.
+- Goal was correctness first; performance was a secondary check. Measured on the full dataset (Python 3.14.3, `time.perf_counter`): **180 `assign_order` calls over 60 partners = 0.022–0.033 s across separate runs (best-of-5 `timeit`; roughly 120–185 µs per order)**; **177 `process_cancellation` calls ≈ 0.001 s**. Timings change with machine load, so read them as an order of magnitude, not a benchmark. At this scale there is no hotspot; the work is already cheap.
+- Evidence: `python -m pytest -q` runs all 279 tests in about 0.35–0.45 s. The timings come from re-running the dataset replay several times.
 
 ## 2. Options considered
 - **Set for `processed_cancellation_ids`** — expected benefit O(1) event lookup vs O(E) list scan. Rejected: tests assert `processed_cancellation_ids == ['C1']` (list shape is part of the contract) and event lists per partner are tiny; converting would add a parallel structure for no measurable gain.
@@ -14,7 +14,7 @@
 
 ## 3. Changes implemented
 - Change: early return on invalid order in `assign_order`/`evaluate_candidates`; shared `_evaluations` helper so selection and explanation cannot diverge; O(1) tuple-key travel lookups retained.
-- Tests protecting correctness: all 274 tests, including `test_all_dataset_orders_assign_deterministically` and `test_demo_fixture_assigns_p2_with_eta_35`.
+- Tests protecting correctness: all 279 tests, including `test_all_dataset_orders_assign_deterministically` and `test_demo_fixture_assigns_p2_with_eta_35`.
 - Measurement: timings above; no attempt was made to "optimize" further because measured cost is already negligible.
 
 ## 4. Trade-offs

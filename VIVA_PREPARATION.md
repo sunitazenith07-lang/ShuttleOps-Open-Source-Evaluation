@@ -17,7 +17,7 @@ ETA is the ranking metric — the whole selection is "lowest feasible ETA wins".
 
 **Inputs and outputs**
 - Inputs: `order` dict (`order_id`, `restaurant_id`, `destination_zone`, `prep_minutes`), `partners` list of dicts, `travel` dict mapping `(from, to) -> minutes`, `now` (current time in minutes).
-- Output of `assign_order`: a dict `{'order_id', 'partner_id', 'pickup_minutes', 'eta_minutes', 'reason'}` — or `partner_id=None, eta_minutes=None` plus a counted `reason` when nobody is eligible.
+- Output of `assign_order`: a dict `{'order_id', 'partner_id', 'pickup_minutes', 'eta_minutes', 'reason'}` — the same five keys every time; when nobody is eligible `partner_id`, `pickup_minutes` and `eta_minutes` are `None` and `reason` gives counted rejection causes.
 - Output of `process_cancellation`: a **new** partner dict (deep copy) with the order removed from `active_order_ids`, workload released, and `event_id` recorded.
 
 **Limitations**
@@ -35,7 +35,7 @@ ETA is the ranking metric — the whole selection is "lowest feasible ETA wins".
 | `service.py` | All business logic: validation helpers, `estimate_eta`, `assign_order`, `explain_assignment`, `process_cancellation`. |
 | `fixtures.py` | `sample_inputs()` — the demo's order/partners/travel. |
 | `main.py` | Demo entry point: prints `assign_order` on the fixture. |
-| `tests/` | `test_contract.py` (10 contract tests), `test_acceptance_matrix.py` (~186 parametrized cases), `test_edge_cases.py` (31 boundary ETA cases), `test_regression.py` + `test_dataset.py` (added by me). |
+| `tests/` | `test_contract.py` (9 contract tests), `test_acceptance_matrix.py` (189 parametrized cases), `test_edge_cases.py` (31 boundary ETA cases), `test_regression.py` (45) + `test_dataset.py` (5) — the last two added by me. |
 | `data/records.json` | 180 orders, 60 partners, 387 travel rows, 177 cancellations + edge-case catalog. |
 | `.github/workflows/tests.yml` | CI: installs deps, runs demo, runs pytest, publishes counts. |
 
@@ -84,7 +84,7 @@ min(candidates, key=(eta_minutes, str(partner_id)))   → result dict
 
 **4. Lexicographic tie-break** — the `min` key is a tuple; Python compares element-wise, so equal ETAs compare `partner_id` strings ascending (`'AAA' < 'ZZZ'`). `str()` guards non-string IDs. Deterministic regardless of input list order.
 
-**5. Cancellation idempotency** — `process_cancellation` deep-copies, then: `if event_id in processed_cancellation_ids: return copy`. Only a *new* event can remove an order, release `minutes_by_order[order_id]` (clamped `max(0, …)`), drop it from `minutes_by_order`, and append the `event_id`. A replayed event — even with a different `order_id` payload — changes nothing.
+**5. Cancellation idempotency** — `process_cancellation` deep-copies, then: `if event_id in processed_cancellation_ids: return copy`. Only a *new* event can remove an order, pop `minutes_by_order[order_id]` and subtract it from a valid workload (clamped `max(0, …)`; a malformed workload is left untouched), and append the `event_id`. A replayed event — even with a different `order_id` payload — changes nothing.
 
 ---
 
@@ -138,7 +138,7 @@ min(candidates, key=(eta_minutes, str(partner_id)))   → result dict
 
 1. *What does SmartDispatch do?* Assigns one delivery order to the eligible partner with the lowest computed ETA; also processes order cancellations idempotently.
 2. *What are the inputs to `assign_order`?* `order` dict, `partners` list, `travel` dict of `(from,to) → minutes`, optional `now`.
-3. *What does it return when nobody is eligible?* `{'order_id', 'partner_id': None, 'eta_minutes': None, 'reason': 'no eligible partner: <reason> (n), …'}`.
+3. *What does it return when nobody is eligible?* `{'order_id': …, 'partner_id': None, 'pickup_minutes': None, 'eta_minutes': None, 'reason': 'no eligible partner: <reason> (n), …'}` — the same five keys as a successful result.
 4. *Why is the demo output the same before and after the fix?* Both fixture partners were already eligible; the starter bug only showed with ineligible partners or invalid data.
 5. *What real-world constraint does `capacity` model?* How many simultaneous orders a rider can carry.
 
@@ -181,12 +181,12 @@ min(candidates, key=(eta_minutes, str(partner_id)))   → result dict
 
 **Cancellation**
 
-31. *Walk through `process_cancellation`.* Guard non-dict → `deepcopy` → ensure `processed_cancellation_ids` list → if `event_id` already there, return copy → ensure `active_order_ids` list → if order active: remove it, release `minutes_by_order[order_id]` clamped at 0, drop the `minutes_by_order` entry → append `event_id` → return copy.
+31. *Walk through `process_cancellation`.* Guard non-dict → `deepcopy` → ensure `processed_cancellation_ids` list → if `event_id` already there, return copy → ensure `active_order_ids` list → if order active: remove it, `pop` its `minutes_by_order` entry (inside `try/except TypeError` so an unhashable ID releases 0 instead of crashing), and if the current workload is valid set it to `max(0, workload - release)` → append `event_id` → return copy.
 32. *Why `deepcopy` and not `dict(partner)`?* Shallow copy shares nested `active_order_ids`/`minutes_by_order` — mutating them would corrupt the caller's record.
 33. *What makes it idempotent?* `event_id in processed_cancellation_ids` → early return before any mutation.
 34. *Duplicate `event_id` with a different `order_id`?* Ignored — the ID was already processed; verified by `test_duplicate_event_id_with_different_order_still_ignored`.
 35. *Unknown order cancellation?* `order_id not in active_order_ids` → nothing removed, workload unchanged, `event_id` still recorded once.
-36. *How is workload kept non-negative?* `max(0, current - release)`, and invalid `release`/`current` values are sanitized to 0 first.
+36. *How is workload kept non-negative?* `max(0, current - release)` when `current` is a valid time. An invalid `release` is treated as 0 (nothing released). An invalid `current` (e.g. `'20'`) is left untouched rather than coerced to 0, because the brief says not to turn invalid data into valid-looking values; that partner stays ineligible via `_partner_problem`.
 37. *What about events with no `event_id`?* `None` becomes the dedup key — first ID-less event applies per partner, later ID-less events are skipped. Documented limitation.
 38. *Does cancellation of one order affect another order's minutes?* No — only `minutes_by_order[order_id]` is released/removed.
 
@@ -200,14 +200,14 @@ min(candidates, key=(eta_minutes, str(partner_id)))   → result dict
 
 **Testing & complexity**
 
-44. *How many tests, and what changed?* Baseline 229 tests: 65 failed / 164 passed. Now 274 pass — 45 new tests across `test_regression.py` (38) and `test_dataset.py` (5).
+44. *How many tests, and what changed?* Baseline 229 tests: 65 failed / 164 passed. Now 279 pass — 50 new cases across `test_regression.py` (45) and `test_dataset.py` (5).
 45. *Big-O of the hot path?* `assign_order` O(P) time / O(P) space; `process_cancellation` O(A+E) time; all travel lookups O(1).
 
 ---
 
 ## H. Live modification exercises (likely viva asks)
 
-1. **"Make `pickup_minutes` appear in the unassigned result too."** → `service.py::assign_order`, the `not candidates` return: add `'pickup_minutes': None`. Expect unassigned dicts to carry the key; check `test_no_candidate_returns_reason` still passes (it doesn't assert the key — additive change is safe). Run `pytest -q`.
+1. **"Add a `status` field (`'ASSIGNED'` / `'UNASSIGNED'`) to every result."** → `service.py::assign_order`, all three `return` dicts. Expect every result to carry it; update `RESULT_KEYS` in `tests/test_regression.py::test_assigned_and_unassigned_results_share_one_schema` (that test pins the exact key set, so it must fail first, which proves it works) and the exact-dict check in `test_demo_fixture_assigns_p2_with_eta_35`. Run `pytest -q`. (Note: `pickup_minutes: None` on unassigned results is already implemented.)
 2. **"Reject partners whose `workload_minutes` exceeds some maximum (e.g. 480)."** → `_partner_problem`: after the `_is_valid_time(workload)` check add `if workload > MAX_WORKLOAD: return 'workload too high'`. Test: partner with `workload_minutes=999` → `partner_id=None`.
 3. **"Change tie-break to highest partner_id."** → `assign_order`/`evaluate_candidates` key: `min(..., key=(eta,))` then max partner_id, or keep `min` with a descending trick — simplest correct: `min(candidates, key=lambda c: (c['eta_minutes'],))` then among minima pick `max(partner_id)`. Verify `test_tie_break_by_partner_id` flips → update expectation per new spec.
 4. **"Add a `priority` field that rejects non-'NORMAL' orders."** → `_order_problem`: `if order.get('priority', 'NORMAL') != 'NORMAL': return 'unsupported priority'`. The dataset orders all carry `priority` — confirm 180-order replay still assigns identically.
