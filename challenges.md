@@ -1,23 +1,22 @@
-# challenges.md - COMPULSORY submission
-
-This file is mandatory and worth 5 marks. Describe your actual experience honestly. Do not invent difficulties to fill the page.
+# challenges.md — implementation notes
 
 ## 1. Challenge or confusing behaviour
-What candidate-selection, ETA, capacity, missing-data, tie-breaking, or cancellation case was difficult to understand?
+The most important issue was that a candidate could have a mathematically calculable ETA but still be unavailable: `assign_order` did not inspect the partner's active status or order capacity. Malformed time values also reached arithmetic directly.
 
 ## 2. Evidence
-Summarize the relevant assertion, log, output, or minimal reproducible example.
+The untouched suite reported **65 failed, 164 passed**. Failures included inactive and full partners being assigned, negative preparation time being accepted, and cancellation event IDs appearing twice after replay. The acceptance matrix also covered strings, booleans, `NaN`, and infinity as invalid time values.
 
 ## 3. What I tried
-List debugging steps or experiments you actually performed and what each one showed.
+- Read the problem statement, service, models, fixtures, demo, all visible tests, and data schema notes.
+- Ran the baseline suite and demo before editing.
+- Compared each failing acceptance case to the branch in `estimate_eta`, `assign_order`, or `process_cancellation`.
+- Added regression cases for invalid workload, malformed order/partner collection, reason clarity, repeated event IDs, and duplicate active-order entries.
 
 ## 4. Resolution
-What was the root cause? What did you change, and why did it address the cause rather than hide the symptom?
+I kept the public functions and dictionary-based data structures, then added input checks before time arithmetic and partner selection. Cancellation now checks the processed-event list before changing active orders or workload. These changes address the decision points that caused the failures rather than special-casing test inputs.
 
 ## 5. Proof and regression prevention
-Which test(s) demonstrate the fix? What related case might still break?
+The final `.venv/bin/python -m pytest -q` run reported **239 passed**. The baseline tests continue to exercise the ETA formula, missing travel, capacity, active status, tie-breaking, and duplicate cancellations. The new regression file covers additional malformed-input and event-reuse cases.
 
 ## 6. Unresolved challenge or next step
-State remaining limitations and how you would investigate them next.
-
-If you did not encounter a major blocker, say so honestly and describe the hardest edge case you deliberately tested and what it taught you. Do not manufacture a story.
+Local validation used Python 3.14.7 while GitHub Actions specifies Python 3.11.The code uses standard-library features, but compatibility with Python 3.11 should still be verified through the repository's CI workflow before submission. No performance measurements were made because the task is focused on correctness and the dataset is small.
