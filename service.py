@@ -103,6 +103,38 @@ def assign_order(order, partners, travel, now=0):
             'eta_minutes': chosen['eta_minutes'], 'reason': 'assigned'}
 
 
+def explain_assignment(order, partners, travel, now=0):
+    """Add one explanation per input candidate without changing assign_order.
+
+    Rows retain input order. ``eligible`` describes validation, while ``selected``
+    identifies the winner. Only the first row wins an identical ID/ETA tie.
+    """
+    assignment = assign_order(order, partners, travel, now)
+    candidates = []
+    if isinstance(partners, (list, tuple)):
+        candidates = [
+            dict(estimate_eta(order, partner, travel, now),
+                 candidate_index=index, selected=False)
+            for index, partner in enumerate(partners)
+        ]
+    winner_recorded = False
+    for candidate in candidates:
+        if not candidate['eligible']:
+            continue
+        if (not winner_recorded
+                and candidate['partner_id'] == assignment['partner_id']
+                and candidate['eta_minutes'] == assignment['eta_minutes']):
+            candidate.update(selected=True, reason='selected by ETA and partner ID')
+            winner_recorded = True
+        elif candidate['eta_minutes'] > assignment['eta_minutes']:
+            candidate['reason'] = 'higher ETA than selected partner'
+        elif candidate['partner_id'] != assignment['partner_id']:
+            candidate['reason'] = 'equal ETA; earlier partner ID selected'
+        else:
+            candidate['reason'] = 'equal ETA and partner ID; earlier candidate selected'
+    return dict(assignment, candidates=candidates)
+
+
 def process_cancellation(partner, order_id, event_id):
     """Apply a valid event once; malformed events/state leave a copy unchanged.
 
