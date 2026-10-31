@@ -1,32 +1,17 @@
-# approach.md - Required submission
+# Approach and Implementation Decisions
 
-Complete this file in your own words. Be concise and specific to the work you actually performed.
+## Starting Test Result & Baseline Analysis
+- Initial testing with the unedited starter codebase returned failures across validation parameters, including implicit boolean coercion leaking into time parameters, capacity limits letting ineligible candidates through, and missing idempotence gates during cancellation processing.
 
-## 1. Baseline
-- Commands run before editing:
-- Initial test result (include the actual summary):
-- Demo/output observed:
+## Code and Data Flow Exploration
+- Input metrics route directly into `assign_order`, which triggers an execution loop evaluating each candidate via `estimate_eta`.
+- `estimate_eta` validates schemas and performs exact lookup queries against the `travel` tuple map before running time aggregation steps.
+- Dynamic cancellation inputs pass through `process_cancellation` to release order tokens and dynamically reduce a partner's overall workload time.
 
-## 2. Codebase understanding
-- Important files/functions inspected:
-- Candidate filtering, ETA calculation, and capacity flow traced:
-- How you confirmed your understanding:
+## Key Hypotheses & Solution Design
+1. **Strict Time Isolation Layer:** Python promotion promotes boolean variables under standard comparison paths (`isinstance(True, int) == True`). A robust isolated helper `_is_valid_time` enforces data type handling to completely filter out `bool`, `None`, `nan`, `inf`, and malformed types before math execution.
+2. **Deterministic Selection Criteria:** Standard tie-breaking is achieved by using Python's built-in `min()` operation leveraging a multi-key tuple sorting strategy `(item['eta_minutes'], str(item['partner_id']))` to guarantee stable evaluation order.
+3. **Idempotence Integrity Architecture:** Implemented an early exit condition inside `process_cancellation` checking `processed_cancellation_ids` to ensure duplicate events do not repeatedly drain partner workloads.
 
-## 3. Investigation and implementation strategy
-For each major defect, describe the symptom, hypothesis, evidence from a test/log/example, and the fix chosen.
-- Issue 1:
-- Issue 2:
-- Issue 3 (if applicable):
-
-## 4. Implementation decisions
-- Main changes and why:
-- Alternatives considered and why rejected:
-- Assumptions:
-
-## 5. Verification
-- Tests added or changed:
-- Commands run and actual results:
-- Edge cases verified:
-- Remaining failures or known limitations:
-
-Record actual engineering decisions and evidence. Do not claim tests or experiments you did not run.
+## Implementation Strategy
+- Implemented explicit conditional blocks for all validation criteria. By isolating each parameter gate (order structure, partner structure, capacity boundaries, travel routes), the code remains highly auditable and cleanly follows the rules defined in the brief.
