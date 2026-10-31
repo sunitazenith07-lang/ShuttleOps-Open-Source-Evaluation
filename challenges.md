@@ -1,23 +1,11 @@
-# challenges.md - COMPULSORY submission
+# Challenges
 
-This file is mandatory and worth 5 marks. Describe your actual experience honestly. Do not invent difficulties to fill the page.
+## Validation without changing the public API
 
-## 1. Challenge or confusing behaviour
-What candidate-selection, ETA, capacity, missing-data, tie-breaking, or cancellation case was difficult to understand?
+The visible failures mixed wrong assignments with `TypeError` exceptions. For example, text travel times reached arithmetic, and invalid preparation times were accepted or crashed. The baseline result, 65 failures, and `test_invalid_or_missing_travel_time_rejected` made this reproducible.
 
-## 2. Evidence
-Summarize the relevant assertion, log, output, or minimal reproducible example.
+I first mapped which values belong to an order, a partner, and a route. The resolution was to validate values at the boundary of `estimate_eta()` and keep its established result shape for invalid data: `eligible` is false and ETA is `None`. Assignment adds availability checks because ETA alone should not decide capacity or active status.
 
-## 3. What I tried
-List debugging steps or experiments you actually performed and what each one showed.
+The other tricky case was cancellation idempotency. The original code released an order only once because the ID was removed, but still recorded the duplicate event. Checking `processed_cancellation_ids` before any change fixes both the duplicate record and the risk of future repeated side effects. `test_duplicate_cancellation_is_idempotent` and the added non-mutation test protect this behaviour.
 
-## 4. Resolution
-What was the root cause? What did you change, and why did it address the cause rather than hide the symptom?
-
-## 5. Proof and regression prevention
-Which test(s) demonstrate the fix? What related case might still break?
-
-## 6. Unresolved challenge or next step
-State remaining limitations and how you would investigate them next.
-
-If you did not encounter a major blocker, say so honestly and describe the hardest edge case you deliberately tested and what it taught you. Do not manufacture a story.
+There were no unresolved test failures. Concurrency remains outside this small in-memory API; a production caller would need an atomic reservation around selection and assignment.

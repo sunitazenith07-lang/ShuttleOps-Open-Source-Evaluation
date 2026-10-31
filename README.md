@@ -6,6 +6,10 @@ Zenith School of AI | Individual Open-Source Evaluation | Python 3.10+ | Synthet
 
 Logistics: partner eligibility, capacity, ETA calculation, tie-breaking and cancellation handling.
 
+## Dispatch behaviour
+
+Orders and time values are validated before assignment. A partner must be explicitly active, have valid positive capacity, be below that capacity, and have both required finite travel times. Equal ETAs are resolved by ascending partner ID. Cancellation processing returns a copied record and records each event ID once, so retries cannot release workload twice.
+
 ## Start here — read before coding
 
 **Start with the [Student Reading Checklist](STUDENT_START_HERE.md).** It lists the required reading and every deliverable.

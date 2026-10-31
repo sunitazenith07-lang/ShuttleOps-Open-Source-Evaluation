@@ -1,23 +1,15 @@
-# optimizations.md - Required submission
+# Optimizations and trade-offs
 
-Document optimizations you considered or implemented. Do not claim a speedup or improvement unless you measured it.
+## Objective
 
-## 1. Baseline and objective
-- What needed improvement (correctness, clarity, complexity, memory, repeated work, maintainability)?
-- What evidence suggested an improvement could help?
+The priority was correctness and predictable failure handling, not a measured performance problem. The original pass over partners was already linear, but it evaluated candidates that were inactive or already full.
 
-## 2. Options considered
-Describe each option's expected benefit and risk, including rejected ideas.
+## Changes made
 
-## 3. Changes implemented
-- Change and reason:
-- Tests that protect correctness:
-- Measurement method and result (only if measured):
+Assignment now filters unavailable partners before estimating their routes. It retains one linear pass through the partner list and uses `min()` with `(eta, partner_id)` for deterministic selection. Validation helpers remove repeated type checks and make the rules visible in one place.
 
-## 4. Trade-offs
-Explain trade-offs involving clarity, correctness, performance, memory, or maintainability.
+No performance number is claimed: the test run is a correctness check, not a benchmark. The relevant protection is the 232-passing-test suite, including capacity and ETA matrices.
 
-## 5. Further improvements
-What would you do next with more time, and how would you validate it?
+## Trade-offs and next steps
 
-If you made no optimization change, state that honestly and compare at least two reasonable options. Correctness and maintainability take priority over unnecessary complexity.
+Strictly requiring non-empty string identifiers and `active is True` rejects loosely formatted external data, which is safer than silently coercing it. Building a list of eligible estimates is clear for this small engine; a future large-scale version could track the current best candidate while iterating to avoid the temporary list. A production design should add typed models, route-data ingestion validation, persistence, and atomic capacity reservations before optimizing throughput.
