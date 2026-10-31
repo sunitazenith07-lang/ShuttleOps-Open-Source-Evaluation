@@ -1,0 +1,678 @@
+SMARTDISPATCH — CONSOLIDATED CHANGE AND DEBUGGING RECORD
+========================================================
+
+Purpose
+-------
+This file consolidates the implementation and documentation changes made
+during the debugging work, along with the engineering/documentation guidance
+reviewed from the shared ChatGPT conversation. It records actual repository
+behavior and actual test results; it does not claim that every possible input
+has been tested.
+
+
+1. REQUIREMENTS AND ENGINEERING APPROACH
+----------------------------------------
+The dispatch engine must:
+
+- Validate required order and partner identifiers.
+- Require non-negative, finite numeric values for times and reject Booleans
+  and numeric strings. Zero is a valid duration.
+- Require both travel legs; a missing route is not equivalent to zero travel.
+- Calculate pickup as current time + partner-to-restaurant travel +
+  remaining workload.
+- Calculate delivery ETA as pickup + preparation time +
+  restaurant-to-customer travel.
+- Consider only active partners below a valid positive integer capacity.
+- Choose the eligible partner with the lowest ETA; break ties by ascending
+  partner ID so results do not depend on input ordering.
+- Leave an order unassigned with a reason when no valid candidate remains.
+- Apply each cancellation event at most once and keep workload non-negative.
+
+Debugging was organized around the requirement, observed input, expected
+result, actual result, root condition and regression evidence. Parameterized
+failures were grouped by shared behavior rather than treated as independent
+bugs.
+
+
+2. BASELINE AND FINAL EVIDENCE
+------------------------------
+Environment:
+  Python 3.14.7
+  pytest 9.2.0
+
+Baseline:
+  Command: python3 -m pytest -q --tb=no
+  Result: 65 failed, 164 passed (229 test cases).
+  Demo: python3 -m main
+  Output selected P-2 with pickup time 13 and ETA 35.
+
+Final verification:
+  Command: python3 -m pytest -q
+  Result: 235 passed.
+  Demo: python3 -m main
+  Output: {'order_id': 'O-7', 'partner_id': 'P-2',
+           'pickup_minutes': 13, 'eta_minutes': 35, 'reason': 'assigned'}
+
+The local terminal did not provide a `python` executable, so validation used
+`python3`. The CI workflow specifies Python 3.11; that runtime was not tested
+locally. A no-eligible example with a full partner and a candidate missing a
+required route returned partner_id=None, eta_minutes=None and reason
+"no eligible partner or missing time data".
+
+
+3. IMPLEMENTATION CHANGES ALREADY COMMITTED
+-------------------------------------------
+Commit: ed307b3
+Subject: Fix dispatch eligibility, ETA validation, and cancellation handling
+
+service.py:
+- Added identifier and numeric-time validation.
+- Rejected missing/negative/non-finite/Boolean/non-numeric time values while
+  allowing zero.
+- Rejected malformed travel containers, malformed order/partner records and
+  invalid ETA inputs.
+- Guarded ETA arithmetic against overflow and non-finite results.
+- Filtered inactive partners and partners at or above capacity.
+- Kept deterministic selection by ETA and partner ID.
+- Returned explicit unassigned results when no eligible estimate remains.
+- Made cancellation idempotent by checking processed event IDs before
+  state changes.
+- Applied cancellations to a deep copy, removed only matching active orders,
+  reduced workload by recorded order minutes, and clamped workload at zero.
+- Raised explicit errors for malformed cancellation state or invalid workload
+  values instead of silently reporting success.
+
+tests/test_regressions.py:
+- Added six cases: malformed partner among valid candidates; three malformed
+  order shapes; ETA overflow; and cancellation input immutability.
+- Existing tests were not deleted, skipped, weakened or bypassed.
+
+Project documentation from that commit:
+- approach.md
+- challenges.md
+- optimizations.md
+- TESTING.md
+- DISPATCH_NOTES.md
+- AI_USAGE_TEMPLATE.md
+
+The commit included the required Co-authored-by trailer. No pull request was
+created or merged in this work.
+
+
+4. CHECKPOINTS 1–6 — RECONSTRUCTED PROJECT STUDY GUIDE
+-------------------------------------------------------
+
+Important source note:
+The shared ChatGPT page I could access contains Checkpoints 7 and 8, but it
+does not expose the original material for Checkpoints 1–6. The sections below
+are therefore a repository-grounded reconstruction to make this guide useful
+from Checkpoint 1 onward. They are not quotations or a claim that the missing
+checkpoint text was present in the shared conversation. The reconstruction
+uses the checked-in problem statement, source, tests and observed run results.
+
+CHECKPOINT 1 — PROJECT PURPOSE, SCOPE AND SUCCESS CRITERIA
+
+Project purpose:
+SmartDispatch is an offline delivery-partner assignment and ETA engine. Given
+an order, partner records and synthetic travel times, it determines which
+eligible partner can deliver the order soonest. It also processes cancellation
+events that update partner workload.
+
+This is a decision-logic exercise, not a mobile app, map interface, live GPS
+system or production logistics platform. The included records are synthetic;
+the service does not fetch live traffic or persist state by itself.
+
+What a correct result means:
+- An assignment has a valid order ID and selected eligible partner ID.
+- Its pickup and final ETA follow the specified formulas.
+- Every required route and time input is valid.
+- No inactive or full partner is selected.
+- Equal ETA candidates produce the same winner regardless of input order.
+- If no candidate is eligible, the order is explicitly unassigned.
+- Replaying one cancellation event does not apply its state change twice.
+
+Success is not just "the demo prints a dictionary." Correctness includes
+validating inputs, honoring capacity, preserving deterministic behavior,
+handling failures safely and explaining the result with evidence.
+
+Scope boundary:
+- In scope: in-memory dispatch, ETA arithmetic, partner eligibility,
+  cancellation behavior, tests and project notes.
+- Out of scope: live route calculation, database persistence, API/server
+  deployment, user interface and production monitoring.
+
+CHECKPOINT 2 — TURN THE PROBLEM STATEMENT INTO ACCEPTANCE RULES
+
+Convert each prose requirement into observable input/output behavior before
+changing code. For example:
+
+Requirement                         Observable check
+----------------------------------  ------------------------------------------
+Order identity is valid             Missing/empty IDs do not get assigned
+Travel data is complete             Both route keys must be present
+Durations are non-negative          Negative times make ETA ineligible
+Zero is allowed                     Zero remains a valid time input
+Partner can take an order           Active AND below capacity
+Best candidate is selected          Minimum ETA among eligible candidates
+Tie behavior is stable              Ascending partner ID breaks ETA ties
+No reliable candidate exists        Return unassigned result and reason
+Cancellation is processed once     Duplicate event ID causes no second change
+
+Write conjunctions explicitly. Eligibility is not "active OR has room"; both
+conditions are required. ETA validity also combines multiple conditions:
+valid order and partner identifiers AND valid time values AND both available
+travel legs AND finite calculated output.
+
+Separate input categories:
+- Valid: non-empty identifiers, non-negative finite numeric times, zero
+  durations, valid partner records and complete routes.
+- Missing: absent route/identifier/time data; missing route information cannot
+  be assumed to mean zero.
+- Invalid: negative values, strings where numbers are required, Booleans,
+  NaN, infinity, malformed containers and invalid capacity.
+- Boundary: zero time, capacity exactly equal to active order count, and
+  values immediately below or above capacity.
+
+This breakdown supplies a checklist for code inspection and test design. It
+also prevents a common mistake: deciding expected behavior based on what the
+starter happens to do instead of what the acceptance contract requires.
+
+CHECKPOINT 3 — REPOSITORY STRUCTURE AND DATA FLOW
+
+Files and responsibilities:
+- `models.py`: creates small order and partner dictionaries used by examples.
+- `fixtures.py`: builds the offline demo's sample order, partners and
+  tuple-keyed travel map.
+- `service.py`: estimates ETA, assigns an eligible partner and processes
+  cancellations.
+- `main.py`: calls the fixture and dispatch service, then prints the result.
+- `tests/`: verifies formulas, validity boundaries, selection, capacity,
+  cancellation and regression behavior.
+- `data/`: documents a larger synthetic dataset; the offline demo does not
+  require live network calls.
+- `pyproject.toml` and `requirements-dev.txt`: test and project setup.
+- `.github/workflows/tests.yml`: CI uses Python 3.11, installs dependencies,
+  runs the offline demo and runs pytest.
+
+Dispatch flow:
+  order + partner list + travel map + current time
+       -> reject malformed/ineligible partners
+       -> validate identifiers, durations and required route keys
+       -> calculate pickup and ETA per valid candidate
+       -> rank by (ETA, partner ID)
+       -> return assignment OR unassigned result with reason
+
+Cancellation flow:
+  partner state + order ID + event ID
+       -> copy the partner record
+       -> check whether event ID was processed
+       -> if new and order is active, remove it and release its minutes
+       -> record event ID once
+       -> return updated copy
+
+Important code-reading distinction:
+`estimate_eta` is independently useful and directly tested, so validation of
+the calculation inputs belongs there. `assign_order` owns selection policy,
+so partner active/capacity checks belong in the dispatch loop. Keeping these
+responsibilities distinct avoids relying on dispatch-only checks when callers
+invoke ETA estimation directly.
+
+CHECKPOINT 4 — INPUT VALIDATION AND SAFE FAILURE BEHAVIOR
+
+Use explicit validation at the boundary where a value is consumed. In
+`service.py`, `_is_identifier` accepts a non-empty, non-whitespace string.
+`_is_valid_time` accepts non-negative integers and finite non-negative floats,
+but rejects Booleans, other types, negatives, NaN and infinity.
+
+Examples:
+  0         -> valid time; use in the arithmetic
+  8         -> valid time; use in the arithmetic
+  8.5       -> valid finite time; use in the arithmetic
+  -1        -> invalid negative time
+  "8"       -> invalid type; do not silently coerce
+  True      -> invalid type although bool subclasses int in Python
+  None      -> missing/invalid required time
+  NaN       -> invalid because it is not finite
+  infinity  -> invalid because it is not finite
+
+Missing travel has its own significance. For a route mapping:
+  {("Z", "R"): 0, ("R", "D"): 4}
+contains a valid zero-minute first leg.
+  {("R", "D"): 4}
+does not contain the required Z-to-R leg and therefore cannot produce a
+reliable ETA.
+
+Safe-failure principles applied:
+- Do not return an eligible estimate with an unknown route.
+- Do not convert bad input into a success-shaped zero.
+- Do not allow one malformed candidate to prevent a separate valid candidate
+  from being considered.
+- Do not return an infinite ETA if finite floating-point values overflow
+  during addition.
+- For ordinary dispatch validation failures, return an ineligible estimate
+  or an unassigned order with a reason.
+- For malformed cancellation state, raise explicit errors rather than
+  pretending cancellation succeeded.
+
+Identifier checks also avoid ambiguous references: `None`, an empty string
+and numeric zero are not accepted as order/partner/zone identifiers in this
+implementation.
+
+CHECKPOINT 5 — ETA, ELIGIBILITY AND DETERMINISTIC SELECTION
+
+Keep the two time calculations separate:
+  pickup = now + partner-to-restaurant travel + remaining workload
+  ETA    = pickup + restaurant preparation + restaurant-to-customer travel
+
+Example:
+  now = 15, first leg = 8, workload = 12,
+  preparation = 10, second leg = 20
+  pickup = 15 + 8 + 12 = 35
+  ETA = 35 + 10 + 20 = 65
+
+Pickup 35 is not the final ETA; final delivery ETA is 65 in this example.
+The demo has a different input set: now 0, first leg 8, workload 5,
+preparation 10, second leg 12; pickup is 13 and ETA is 35.
+
+Eligibility is a gate before ranking:
+1. Partner record is a mapping with required identifiers.
+2. `active` is exactly `True`.
+3. Active order IDs have the expected list shape.
+4. Capacity is a positive integer and not a Boolean.
+5. Active order count is strictly less than capacity.
+6. Order, time and both travel inputs pass validation.
+7. Calculated pickup and ETA remain finite and non-negative.
+
+Then rank only eligible candidates using:
+  (eta_minutes, partner_id)
+
+Example:
+  Eligible partner B: ETA 24
+  Eligible partner A: ETA 24
+  Inactive partner C: ETA 10
+The inactive candidate is rejected before ranking. Partner A wins the tie
+against B because A sorts before B. Putting B first in the input list must
+not alter the selected result.
+
+Capacity boundary for capacity 3:
+  0 active orders -> below limit; may be eligible
+  1 active order  -> below limit; may be eligible
+  2 active orders -> below limit; may be eligible
+  3 active orders -> full; reject
+  4 active orders -> over capacity; reject
+
+Being below capacity does not alone guarantee assignment: the partner must
+also be active and have a calculable ETA. The final API currently returns a
+generic no-candidate reason, not a detailed per-partner rejection report.
+
+CHECKPOINT 6 — CANCELLATION, STATE AND DEBUGGING WORKFLOW
+
+Cancellation is a state transition, not just arithmetic. The event ID
+identifies an already applied operation. Processing a duplicate event should
+return state unchanged from the first processing.
+
+Illustration:
+Before: order O active; workload 9; per-order minutes O=9; events [].
+First C: order O removed; workload becomes max(0, 9-9)=0; events [C].
+Replay C: order remains removed; workload remains 0; events remain [C].
+Original object: remains as it was before the function call because the
+service returns a deep-copied record.
+
+If workload is 3 and cancellation minutes are 10, the updated workload is
+max(0, 3-10)=0, never -7. If the order ID was not active, cancellation must
+not release that order's workload. A different event ID is a distinct event;
+deduplication is by event identity.
+
+Evidence-led debugging sequence:
+1. Locate the exact failing test and read its input and assertion.
+2. State the contract that applies to that input.
+3. Compare expected and actual output or exception.
+4. Find the shared condition in the producer function; avoid patching only a
+   downstream symptom.
+5. Make the smallest change that enforces the contract consistently.
+6. Add a regression test when behavior was previously wrong or unprotected.
+7. Run focused tests, then the full suite and the offline demo.
+8. Record commands/results and limitations exactly; don't infer unrun results.
+
+In this project, 65 failures shared a few missing behaviors rather than
+representing 65 unrelated root causes. Parameterized testing expands one
+function into many cases, which is useful for boundaries but can make a
+single defect appear many times in pytest output.
+
+The six added regression cases cover a malformed partner among valid
+candidates, three malformed order shapes, ETA overflow and cancellation
+input immutability. The existing suite remained intact.
+
+
+6. CHECKPOINTS 7–8 — MATERIAL AVAILABLE IN THE SHARED CHAT
+----------------------------------------------------------
+
+The accessible shared conversation contains two relevant teaching
+checkpoints:
+
+Checkpoint 7 — Testing strategy and regression testing:
+- **Happy-path testing** checks ordinary valid input and confirms the
+  calculation and main result.
+- **Boundary testing** examines exact limits and values around them. For
+  capacity 3, 0, 1 and 2 active orders are below the limit, 3 is exactly full,
+  and 4 exceeds it. Zero-minute durations are also boundary values.
+- **Invalid-input testing** deliberately supplies missing identifiers,
+  negative time, wrong types, Booleans, NaN, infinity and missing routes.
+  Expected behavior is safe rejection, not an accidental assignment or an
+  unhandled arithmetic error.
+- **Integration testing** checks that validation, eligibility, ETA
+  calculation, selection and result construction work together in the full
+  dispatch path.
+- **Regression testing** reruns established behavior after a change and adds
+  cases that prevent a fixed defect from returning.
+- A **test case** is one scenario; a **test matrix** organizes related
+  scenarios; a **test suite** is the full collection of tests.
+- A two-condition eligibility matrix must consider all four combinations:
+  active/room, active/full, inactive/room and inactive/full. Only the first
+  combination can proceed to ETA validation and ranking.
+- Read pytest output by comparing supplied input, expected behavior and
+  actual output or exception. A failed assertion and a `TypeError` are
+  different symptoms and should be traced to their producing condition.
+- Several failed parameter cases may share one underlying logic defect.
+  Parameterization expands a rule across many values; it does not imply one
+  independent code bug per failed line.
+- Preserve existing tests, add regression coverage, run targeted checks and
+  then rerun the full suite and the demo.
+- Document commands, environment, actual totals, representative edge cases
+  and known limitations. Never claim an unrun test passed.
+- A green visible suite is evidence for its tested cases, not proof for every
+  possible input or every production environment.
+
+Checkpoint 7 applied to this repository:
+- Baseline: 65 failed and 164 passed, 229 cases, on Python 3.14.7.
+- The 65 failures grouped into missing time/record validation, missing
+  active/capacity filtering and cancellation event deduplication.
+- The final count of 235 includes six added regression cases; existing tests
+  remained in place.
+- Test run: `python3 -m pytest -q` -> 235 passed.
+- Demo run: `python3 -m main` -> P-2, pickup 13, ETA 35.
+- The terminal lacked `python`; commands were run with `python3`. Local
+  Python 3.14.7 differs from CI's configured Python 3.11 and does not replace
+  a CI run under that version.
+
+Checkpoint 8 — Professional documentation and technical walkthrough:
+- Documentation should answer: What is the project? How does it work? How is
+  it run? How was it tested? What are its limitations?
+- `README.md` introduces the project and setup; `TESTING.md` gives evidence;
+  `DISPATCH_NOTES.md` records worked examples. These files have related but
+  distinct purposes.
+- A worked ETA must show current time, both travel legs, workload and prep;
+  distinguish pickup from the final ETA; show arithmetic and explain what
+  the result means.
+- A no-eligible example must identify candidates, explain why each is
+  rejected (for example full capacity versus missing route), and show why
+  the final order remains unassigned.
+- Each documented edge case should include scenario/input, expected result,
+  actual observation and a test or other evidence.
+- A technical explanation should cover requirement, problem, reason for the
+  chosen approach, resulting behavior and verification.
+- For each important function, prepare to explain its purpose, inputs,
+  validation, processing, output, failure handling and related tests.
+- Be ready to locate the code, identify the conditions that govern behavior,
+  predict the effect of a small change, and verify that change.
+- A pull request proposes changes for review; it is not the same as merging.
+  The assignment asks for one PR and says not to merge it.
+- Commit and PR descriptions should accurately match recorded changes.
+  Include root cause, code changes, test results, documentation, trade-offs
+  and limitations. Do not claim unrun tests passed.
+- A walkthrough should communicate engineering rationale and observable
+  evidence, not private hidden chain-of-thought or unsupported claims.
+
+Checkpoint 8 applied to this repository:
+- The code commit is `ed307b3`, with subject
+  `Fix dispatch eligibility, ETA validation, and cancellation handling`.
+- The commit records validation, eligibility/capacity, deterministic
+  selection, idempotent cancellation, regression tests and required notes.
+- Documentation was expanded separately in this working tree; these later
+  documentation edits are not part of `ed307b3` unless committed afterward.
+- No PR was created or merged here.
+- AI-use policy needs clarification: the shared checkpoint response warns
+  that the problem statement prohibits AI-generated material, while the
+  student reported instructor clarification permitting AI. The checked-in
+  guide still states the prohibition, so disclose assistance and confirm
+  the governing instruction.
+
+The four requested files were expanded accordingly:
+
+approach.md:
+- Explains acceptance rules, formulas, source flow, root causes, decisions,
+  test workflow, commit and known limitations.
+
+optimizations.md:
+- Separates measured facts from complexity analysis and unmeasured ideas.
+- Documents rejected coercion, validation placement and a possible future
+  one-pass selection optimization without claiming a speedup.
+
+TESTING.md:
+- Documents environment, baseline/final results, test categories, edge-case
+  register, regression cases and limits of visible tests.
+
+challenges.md:
+- Groups observed defects into validation/ETA, partner eligibility/capacity
+  and cancellation-state issues, with evidence and unresolved limitations.
+
+
+7. IMPORTANT TEST SCENARIOS
+---------------------------
+- Zero duration is accepted; a missing travel route is rejected.
+- Negative, string, Boolean, NaN and infinite time values are rejected.
+- Full or inactive partners cannot be assigned.
+- Invalid capacity values (including Boolean, non-positive and fractional)
+  are rejected.
+- Equal ETAs resolve by ascending partner ID regardless of input order.
+- Duplicate cancellation does not repeat workload release or event recording.
+- Workload after cancellation never drops below zero.
+- Malformed candidates do not block valid candidates.
+- Finite values that overflow in aggregate do not produce an infinite ETA.
+- Empty candidate sets and missing routes leave the order unassigned with a
+  reason.
+
+
+7A. CONCRETE EXAMPLES AND DECISION TABLES
+-----------------------------------------
+
+A. Valid ETA calculation
+
+Example inputs:
+  current time                         = 0 minutes
+  partner-to-restaurant travel         = 8 minutes
+  partner remaining workload          = 5 minutes
+  restaurant preparation              = 10 minutes
+  restaurant-to-customer travel       = 12 minutes
+
+Calculation:
+  pickup = 0 + 8 + 5 = 13 minutes
+  ETA    = 13 + 10 + 12 = 35 minutes
+
+This matches the offline demo: partner P-2, pickup 13, ETA 35. Pickup time
+and final delivery ETA are different values; preparation and the second route
+leg are added after pickup.
+
+B. Zero, missing and invalid are distinct
+
+Input example                 Classification       Expected handling
+----------------------------  -------------------  --------------------------
+Travel leg = 0                Valid boundary value  Include zero in formula
+Required route absent         Missing information  Candidate is ineligible
+Travel leg = -1               Invalid number       Candidate is ineligible
+Travel leg = "8"              Invalid type         Candidate is ineligible
+Travel leg = True             Invalid type         Candidate is ineligible
+Travel leg = NaN or infinity  Invalid number       Candidate is ineligible
+
+This distinction prevents a missing route from being silently treated as a
+zero-minute trip. It also avoids Python's bool-is-an-int behavior accepting
+True as a valid one-minute value.
+
+C. Partner eligibility matrix
+
+Active?   Has capacity?   Candidate result
+--------  --------------  ---------------------------------------
+True      Yes             Consider ETA if all order/route data is valid
+True      No              Reject; capacity is full or exceeded
+False     Yes             Reject; partner is inactive
+False     No              Reject; both requirements fail
+
+For capacity 3, active-order counts 0, 1 and 2 are below capacity; counts 3
+and 4 are not eligible. Capacity itself must be a positive integer and must
+not be Boolean. A correct ETA does not override an eligibility failure.
+
+D. Candidate ranking and deterministic ties
+
+Candidate     Active/capacity   ETA    Result
+------------  ----------------  -----  -----------------------------
+Partner B     Eligible          24     Candidate
+Partner A     Eligible          24     Selected (ID A precedes B)
+Partner C     Inactive          10     Rejected before ranking
+
+The ineligible 10-minute candidate cannot win just because its calculated ETA
+is lower. Among eligible candidates, ETA is the primary sort key; partner ID
+is the tie-break. Reversing the input list must not change the result.
+
+E. No-eligible example
+
+Order O needs routes Z-to-R and R-to-D:
+  P-full: active, capacity 1, already has 1 active order -> reject at capacity.
+  P-route: active and has room, but only Y-to-R exists; R-to-D is absent
+           -> reject because a required travel time is unknown.
+
+Expected/observed assignment shape:
+  order_id    = O
+  partner_id  = None
+  eta_minutes = None
+  reason      = "no eligible partner or missing time data"
+
+The unassigned reason is intentionally broad in the current API; it does not
+identify which individual candidate failed which condition.
+
+F. Cancellation state transition
+
+Before first event C for order O:
+  active_order_ids = ["O"]
+  workload_minutes = 9
+  minutes_by_order = {"O": 9}
+  processed_cancellation_ids = []
+
+After processing C once:
+  active_order_ids = []
+  workload_minutes = 0
+  processed_cancellation_ids = ["C"]
+
+After replaying event C:
+  state remains as above; the order is not removed twice and "C" is not
+  appended again.
+
+The function returns a deep-copied partner record; the original input remains
+unchanged. If cancellation minutes exceed current workload, the resulting
+workload is clamped at zero. Replaying a different event ID is a distinct
+event, so event identity—not just order identity—controls deduplication.
+
+
+7B. HOW TO READ TEST RESULTS AND TEST COVERAGE
+-----------------------------------------------
+
+The baseline result was:
+  65 failed, 164 passed, total 229 cases.
+
+Interpretation:
+- "164 passed" means those specific test cases matched their assertions on
+  the starter implementation. It does not mean there were 164 code changes.
+- "65 failed" is a test-case count, not a count of independent root causes.
+- Parameterized tests run one case for each listed input; several failures
+  can therefore expose the same missing validation rule.
+- A failed assertion and a raised TypeError are different observed symptoms.
+  Both must be traced to the input and operation that produced them.
+
+After six regression cases were added, the final result was:
+  235 passed.
+
+Useful case-to-evidence map:
+  ETA formula                 test_eta_formula,
+                              test_eta_calculation_matrix
+  Missing/invalid route       test_missing_travel_is_not_zero,
+                              test_invalid_or_missing_travel_time_rejected
+  Preparation/current time   test_preparation_time_validation,
+                              test_current_time_validation
+  Active/capacity            test_inactive_partner_not_assigned,
+                              test_capacity_boundary_matrix
+  Stable tie-break            test_tie_break_by_partner_id,
+                              test_ties_break_by_partner_id_independent_of_input_order
+  Duplicate cancellation     test_duplicate_cancellation_is_idempotent,
+                              test_duplicate_cancellation_is_idempotent_across_workloads
+  Malformed records/overflow  tests/test_regressions.py
+
+Testing types and why they matter:
+- Happy path: confirms normal valid input produces the expected assignment.
+- Boundary test: checks exact limits, including zero and capacity equality.
+- Invalid-input test: checks that malformed data is rejected safely.
+- Integration test: checks the complete validation-to-selection path.
+- Regression test: confirms a later change does not reintroduce a fixed defect.
+
+A test case is one scenario; a test matrix is a systematic set of related
+scenarios; the test suite is the full collection executed. Passing one case
+does not establish the other cases or combinations.
+
+
+7C. CRITICAL REVIEW POINTS
+--------------------------
+
+Before accepting a dispatch result, verify:
+1. Are order ID, restaurant ID, destination zone, partner ID and partner zone
+   present and valid?
+2. Are current time, workload, preparation, and both travel legs actual
+   non-negative finite numbers (not bools or numeric strings)?
+3. Are both route keys present? A zero-valued route is valid; an absent route
+   is not.
+4. Is the partner active, with a valid positive integer capacity and strictly
+   fewer active orders than that capacity?
+5. Is ETA arithmetic still finite after addition?
+6. Were ineligible candidates excluded before comparing ETA?
+7. Is the tie-break independent of candidate input order?
+8. If no candidate remains, does the API return an unassigned result rather
+   than a success-shaped ETA?
+9. For cancellation, was this exact event ID processed already? Is the order
+   actually active? Is workload subtraction valid and clamped at zero?
+10. Were both returned state and original input checked for unwanted mutation?
+
+Common reasoning mistakes to avoid:
+- Treating every failed parameterized case as a separate code defect.
+- Treating a missing value as equivalent to numeric zero.
+- Checking ETA math but forgetting active status or capacity.
+- Checking only the exact full-capacity case but not below/above boundaries.
+- Testing duplicate cancellation's workload but forgetting the event list.
+- Assuming a green visible suite proves all possible data is safe.
+- Claiming performance gains without measuring them.
+- Writing documentation from intent rather than observed code and test output.
+
+
+8. LIMITATIONS AND POLICY DISCLOSURE
+------------------------------------
+Cancellation-event history is stored in the partner record; persistence across
+process restarts depends on the caller persisting that state. There is no
+storage layer or live travel-time provider in this repository. A Python 3.11
+run matching CI remains to be performed.
+
+The shared checkpoint material warns that the supplied assignment policy
+prohibits AI-generated submission material. In this chat, the student stated
+that the instructor clarified AI use was permitted, while the repository's
+checked-in guide still says otherwise. Confirm the applicable policy with the
+instructor and accurately disclose assistance; do not describe AI-generated
+material as unaided work.
+
+
+9. FILES TO REVIEW
+------------------
+Implementation: service.py
+Regression tests: tests/test_regressions.py
+Approach and decision evidence: approach.md
+Testing evidence: TESTING.md
+Challenges and debugging evidence: challenges.md
+Optimization analysis: optimizations.md
+Worked dispatch examples: DISPATCH_NOTES.md
+AI-use disclosure: AI_USAGE_TEMPLATE.md
+
+End of consolidated record.
