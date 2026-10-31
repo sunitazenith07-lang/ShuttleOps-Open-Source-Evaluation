@@ -32,5 +32,11 @@ After making the changes, I needed to ensure that the fixes did not break existi
 
 Final verification result: `241 passed in 0.26s`.
 
+## Evidence and Verification
+
+- Initial test run: 65 failed, 164 passed, 1 warning.
+- Final test run: 241 passed.
+- Added regression tests for invalid workload, non-finite current time, whitespace-only fields, unintended data mutation, and duplicate cancellation IDs.
+
 ## Conclusion
 The biggest learning from this task was that fixing a bug requires understanding the underlying logic, not just making a failing test pass. I also learned the importance of input validation, safe data handling, regression testing, and verifying changes against the complete test suite.

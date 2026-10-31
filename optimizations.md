@@ -44,5 +44,14 @@ The following are ideas for future development, not features implemented in this
 - Consider live traffic information for more realistic ETA estimates.
 - Add monitoring for repeated invalid inputs and failed assignments.
 
+## 6. Trade-offs and Decisions
+
+- Correctness was prioritised over introducing unnecessary complexity.
+- Shared validation logic was preferred over hardcoding individual test cases.
+- Stable partner-ID tie-breaking improves predictable assignment.
+- Copying mutable data during cancellation provides safer updates, with some additional copying overhead.
+
+No performance improvement was claimed because no benchmark was performed.
+
 ## Conclusion
 The main focus of these optimizations was correctness, reliability, and maintainability. The final test suite completed successfully with `241 passed in 0.26s`.

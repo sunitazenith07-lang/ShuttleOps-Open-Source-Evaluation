@@ -1,9 +1,14 @@
-from copy import deepcopy
 import math
 
 def is_valid_number(value):
     """Accept finite, non-negative integers and floats, excluding bool."""
-    return(isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value>=0)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+
+    if isinstance(value, float):
+        return math.isfinite(value) and value >= 0
+
+    return value >= 0
 
 def invalid_eta(partner):
     return{
@@ -24,8 +29,6 @@ def estimate_eta(order, partner, travel, now=0):
     if not is_valid_number(now):
         return invalid_eta(partner)
 
-    
-
     leg1=travel.get((partner.get('zone'),order.get('restaurant_id')))
     leg2=travel.get((order.get('restaurant_id'),order.get('destination_zone')))
 
@@ -36,7 +39,7 @@ def estimate_eta(order, partner, travel, now=0):
 
     if not is_valid_number(workload):
         return invalid_eta(partner)
-    
+
     pickup=now+leg1+workload
     return {'partner_id':partner.get('partner_id'),'pickup_minutes':pickup,'eta_minutes':pickup+prep+leg2,'eligible':True}
 

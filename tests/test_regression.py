@@ -12,7 +12,7 @@ from service import estimate_eta, process_cancellation
     -1,
     True,
     float("nan"),
-    float("inf")
+    float("inf"),
 ])
 def test_invalid_partner_workload_makes_eta_ineligible(workload):
     order = new_order("O-1", "R-1", "D-1", prep_minutes=5)
