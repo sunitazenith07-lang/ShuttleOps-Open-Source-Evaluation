@@ -1,4 +1,3 @@
-"""Deterministic dispatch and non-mutating cancellation handling."""
 from copy import deepcopy
 from math import isfinite
 
@@ -73,7 +72,7 @@ def estimate_eta(order, partner, travel, now=0):
 
 
 def assign_order(order, partners, travel, now=0):
-    """Choose a partner without reserving capacity; callers own assignment state."""
+    """Recommend a partner; the caller records assignments and reserves capacity."""
     result = {'order_id': order.get('order_id') if isinstance(order, dict) else None,
               'partner_id': None, 'eta_minutes': None}
     error = _order_error(order)
@@ -106,12 +105,7 @@ def assign_order(order, partners, travel, now=0):
 
 
 def process_cancellation(partner, order_id, event_id):
-    """Return a copy; invalid events/state are left unchanged, never half-applied.
-
-    Active-order accounting must be present, even for a zero-minute order.
-    Rejected events are not recorded, so callers can repair state and retry.
-    This legacy API returns partner state only, without a separate error result.
-    """
+    """Return updated partner state, or an unchanged copy for rejected events."""
     out = deepcopy(partner)
     if not isinstance(out, dict) or not _identifier(order_id) or not _identifier(event_id):
         return out

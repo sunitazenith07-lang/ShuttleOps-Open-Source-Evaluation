@@ -50,3 +50,14 @@ The caller supplies current workload and active orders. Assignment rejects order
 Cancellation requires a valid active-order list, total workload, and per-order accounting map. An active order must have its own valid recorded minutes; an explicit zero is accepted, but a missing entry is not. Incomplete accounting, invalid input, or unrepresentable arithmetic returns unchanged state without consuming the event ID. After correcting the data, the caller can retry the same event. The existing API still returns only partner state, without a separate error field.
 
 No live GPS, database, batch-assignment feature or concurrent reservation system is included.
+
+## Ambiguity review: final behaviour
+
+| Question reviewed | Decision | Status |
+|---|---|---|
+| Can missing cancellation accounting count as zero? | No. Keep the order, workload and event history unchanged until the accounting is repaired. Explicit zero remains valid. | Fixed and regression-tested |
+| Can an order already active on a supplied partner be assigned again? | Reject it with `order is already active`, including when the existing partner is inactive. | Conservative guard added and regression-tested |
+| Does selection reserve capacity? | No. The caller must update assignment state before the next request. | Existing API preserved; not a reservation fix |
+| Does a rejected cancellation return an error description? | No. It returns unchanged partner state. | Existing API limitation retained |
+
+The investigation and before/after evidence are in challenges.md. The eight regression cases are in `tests/test_accounting.py`, with their outcomes listed in TESTING.md.

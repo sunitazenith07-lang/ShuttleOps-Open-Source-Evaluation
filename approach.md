@@ -26,7 +26,15 @@ The initial failures pointed to three main gaps:
 2. The assignment loop accepted candidates without checking active status or capacity. The fix checks these before calculating an ETA. A partner must have `active is True`, a positive integer capacity, and fewer active orders than that capacity.
 3. Cancellation event IDs were appended without checking whether they had already been processed. The fix checks the event history first. Replaying an event returns unchanged state, including when someone tries to reuse that event ID for a different order.
 
-Stress tests then found an arithmetic overflow during cancellation and an input-order-dependent result for duplicate partner IDs. Their reproductions and fixes are in challenges.md. A later requirements review also reproduced incomplete cancellation accounting and reassignment of already-active orders. Cancellation now requires the active-order list, total workload, and per-order accounting map. For an active order, its own recorded minutes must also be present and valid; missing information leaves state and event history unchanged. Assignment rejects an order already active on any supplied partner, even if that partner is inactive.
+Stress tests then found an arithmetic overflow during cancellation and an input-order-dependent result for duplicate partner IDs. Their reproductions and fixes are in challenges.md.
+
+## Ambiguity review: approach and decisions
+
+After the first 344 tests passed, the code was compared again with the written requirements instead of assuming that passing tests covered every interpretation. Small examples were run to separate accounting defects from API choices the brief did not fully specify.
+
+The review reproduced incomplete cancellation accounting and reassignment of already-active orders. Cancellation now requires the active-order list, total workload, and per-order accounting map. For an active order, its own recorded minutes must also be present and valid; missing information leaves state and event history unchanged. Assignment rejects an order already active on any supplied partner, even if that partner is inactive.
+
+The brief does not explicitly define duplicate-assignment requests, so rejecting an already-active order is a conservative implementation decision. The existing recommendation-only assignment API and state-only cancellation return value were preserved. These are documented limits rather than completed fixes. Reproductions are in challenges.md and test evidence is in TESTING.md.
 
 ## Implementation choices
 

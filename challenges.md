@@ -32,15 +32,15 @@ The fix uses pickup time as a final comparison after ETA and partner ID. It does
 
 One new malformed-input test incorrectly expected the selected ID to be only `P` or `None`. Its inputs included the string `"7"`, which is a valid identifier under the implemented rule. That failure came from the new assertion, not the service. The test was corrected to compare a selected ID with the supplied partner ID. No original test was weakened.
 
-## Missing accounting and duplicate assignments
+## Ambiguity review: reproduction, fix and verification
 
-A requirements review showed that cancelling OLD-1 from the actual fixture removed the order but left 5 workload minutes behind. The fixture has no per-order entry for OLD-1, and cancellation previously treated that missing entry as zero. Missing total workload or active-order lists also received defaults that could allow an incomplete record to be processed.
+**Observed problem:** A requirements review showed that cancelling OLD-1 from the actual fixture removed the order but left 5 workload minutes behind. The fixture has no per-order entry for OLD-1, and cancellation previously treated that missing entry as zero. Missing total workload or active-order lists also received defaults that could allow an incomplete record to be processed.
 
-Eight new regression cases were run before the fix: seven failed and the explicit-zero case passed. The fix removes these accounting defaults. Missing or invalid accounting leaves the partner unchanged and does not consume the event ID. A retry test fills in the missing 5 minutes and submits the same event again; the order is then removed, workload becomes zero, and the event is recorded once. Explicitly recorded zero minutes remain valid.
+**Evidence before the fix:** Eight new regression cases were run before the fix: seven failed and the explicit-zero case passed. The fix removes these accounting defaults. Missing or invalid accounting leaves the partner unchanged and does not consume the event ID. A retry test fills in the missing 5 minutes and submits the same event again; the order is then removed, workload becomes zero, and the event is recorded once. Explicitly recorded zero minutes remain valid.
 
-The review also showed that an already-active order could be assigned again. Assignment now checks the supplied partners' active-order lists before selection and returns `order is already active` when it finds a match. Tests cover both an active and an inactive existing partner, because an inactive partner can still hold an order.
+**Duplicate-order decision:** The review also showed that an already-active order could be assigned again. Assignment now checks the supplied partners' active-order lists before selection and returns `order is already active` when it finds a match. Tests cover both an active and an inactive existing partner, because an inactive partner can still hold an order.
 
-These cases are in `tests/test_accounting.py`. This is a guard against duplicate orders visible in the supplied state, not a reservation system. Two separate calls with stale state can still make the same recommendation.
+**Verification:** These cases are in `tests/test_accounting.py`. After the changes, all eight passed and the full suite passed 352 tests. The later full-suite rerun reported 352 passed in 0.83s. This is a guard against duplicate orders visible in the supplied state, not a reservation system. Two separate calls with stale state can still make the same recommendation.
 
 ## What remains
 

@@ -38,6 +38,12 @@ All test references below are under `tests/` and passed in the latest full run.
 | Active order has explicitly recorded 0 minutes | Apply cancellation normally | Order removed, workload 0, event recorded once | `test_accounting.py::test_explicit_zero_accounting_is_valid` |
 | O already belongs to an active or inactive supplied partner | Do not assign O again | No partner selected; reason `order is already active` | `test_accounting.py::test_already_active_order_is_not_assigned_to_another_partner` |
 
+## Ambiguity review: before and after
+
+The eight cases in `test_accounting.py` were first run against the previous implementation: **7 failed, 1 passed**. They covered missing accounting fields, the incomplete fixture, a repaired retry, explicit zero minutes, and an order already active on either an active or inactive partner.
+
+After the fixes, **all 8 passed**. The subsequent full-suite rerun in the original local repository returned **352 passed in 0.83s**. This verifies the accounting and duplicate-order decisions; it does not establish capacity reservation or a new cancellation error-response format.
+
 ## Added coverage
 
 The original 229 cases remain unchanged. `test_regressions.py` adds 40 cases, `test_stress.py` adds 75, and `test_accounting.py` adds 8, for a total of 352 pytest cases. Before the latest fix, the accounting file produced 7 failures and 1 pass; all eight now pass.

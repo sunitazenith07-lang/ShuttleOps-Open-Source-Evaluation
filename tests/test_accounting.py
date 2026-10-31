@@ -1,4 +1,3 @@
-"""Accounting must be complete before a cancellation is applied."""
 from copy import deepcopy
 import pytest
 from fixtures import sample_inputs
