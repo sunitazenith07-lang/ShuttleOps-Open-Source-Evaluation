@@ -3,9 +3,9 @@
 Complete this file in your own words. Be concise and specific to the work you actually performed.
 
 ## 1. Baseline
-- Commands run before editing:
-- Initial test result (include the actual summary):
-- Demo/output observed:
+- Commands run before editing: `python -m pytest -q`
+- Initial test result: 65 failed, 164 passed, 1 warning in 1.02s.
+- Demo/output observed: No separate demo output was recorded. The initial pytest run reported failures in acceptance and contract tests involving ETA validation, partner eligibility, capacity checks, and cancellation handling.
 
 ## 2. Codebase understanding
 - Important files/functions inspected:

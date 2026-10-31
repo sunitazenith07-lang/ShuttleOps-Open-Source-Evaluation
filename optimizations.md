@@ -1,23 +1,57 @@
-# optimizations.md - Required submission
+# Optimizations
 
-Document optimizations you considered or implemented. Do not claim a speedup or improvement unless you measured it.
+## 1. Improved Input Validation
+I strengthened numeric and string validation in the dispatch logic.
 
-## 1. Baseline and objective
-- What needed improvement (correctness, clarity, complexity, memory, repeated work, maintainability)?
-- What evidence suggested an improvement could help?
+- Rejects negative and non-finite numeric values.
+- Prevents boolean values from being accepted as numbers.
+- Rejects required string fields containing only whitespace.
 
-## 2. Options considered
-Describe each option's expected benefit and risk, including rejected ideas.
+**Benefit:** Invalid data is handled before it can affect ETA calculations or partner assignment.
 
-## 3. Changes implemented
-- Change and reason:
-- Tests that protect correctness:
-- Measurement method and result (only if measured):
+## 2. More Reliable Partner Selection
+I improved the candidate filtering and selection flow.
 
-## 4. Trade-offs
-Explain trade-offs involving clarity, correctness, performance, memory, or maintainability.
+- Excludes inactive partners.
+- Checks whether a partner has available capacity.
+- Considers only candidates with valid ETA data.
+- Uses a stable partner-ID tie-break when ETAs are equal.
 
-## 5. Further improvements
-What would you do next with more time, and how would you validate it?
+**Benefit:** Assignment decisions become more consistent and predictable.
 
-If you made no optimization change, state that honestly and compare at least two reasonable options. Correctness and maintainability take priority over unnecessary complexity.
+## 3. Safer Cancellation Handling
+I improved cancellation processing to avoid unintended changes to the original partner data.
+
+- Copies mutable data before updating it.
+- Prevents duplicate cancellation IDs from processing the same cancellation again.
+- Updates order and workload information only when appropriate.
+
+**Benefit:** Reduces the risk of inconsistent partner data and repeated cancellation updates.
+
+## 4. Improved Test Coverage
+I added regression tests for the bugs and edge cases identified during investigation.
+
+These cover invalid workload values, non-finite current time, whitespace-only order fields, original-data mutation, and duplicate cancellation IDs.
+
+**Benefit:** Helps prevent the same issues from returning in future changes.
+
+## 5. Possible Future Improvements
+The following are ideas for future development, not features implemented in this task:
+
+- Add structured logging for assignment and cancellation decisions.
+- Improve performance when processing a large number of partners.
+- Add more integration tests for complete dispatch workflows.
+- Consider live traffic information for more realistic ETA estimates.
+- Add monitoring for repeated invalid inputs and failed assignments.
+
+## 6. Trade-offs and Decisions
+
+- Correctness was prioritised over introducing unnecessary complexity.
+- Shared validation logic was preferred over hardcoding individual test cases.
+- Stable partner-ID tie-breaking improves predictable assignment.
+- Copying mutable data during cancellation provides safer updates, with some additional copying overhead.
+
+No performance improvement was claimed because no benchmark was performed.
+
+## Conclusion
+The main focus of these optimizations was correctness, reliability, and maintainability. The final test suite completed successfully with `241 passed in 0.26s`.

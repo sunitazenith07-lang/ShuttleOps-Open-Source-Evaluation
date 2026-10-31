@@ -1,0 +1,1353 @@
+.......................FFFFFFFFFFFFFFF.FF....FFF...F.F..FFFFFF....FFFFF. [ 31%]
+..............FFFFFFFFFFFFFFF...........................FFFFFFF....F..FF [ 62%]
+FFF............................................FF..F.F.................. [ 94%]
+.............                                                            [100%]
+================================== FAILURES ===================================
+_____________ test_invalid_or_missing_travel_time_rejected[-1-1] ______________
+
+leg1 = -1, leg2 = 1
+
+    @pytest.mark.parametrize("leg1,leg2", [
+        (None,1),(1,None),(None,None),(-1,1),(1,-1),(-1,-1),
+        ("2",1),(1,"2"),(True,1),(1,False),(float("nan"),1),(1,float("inf")),
+    ])
+    def test_invalid_or_missing_travel_time_rejected(leg1,leg2):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z")
+        travel = {}
+        if leg1 is not None: travel[("Z","R")] = leg1
+        if leg2 is not None: travel[("R","D")] = leg2
+        result = estimate_eta(order,partner,travel)
+>       assert result["eligible"] is False
+E       assert True is False
+
+tests\test_acceptance_matrix.py:37: AssertionError
+_____________ test_invalid_or_missing_travel_time_rejected[1--1] ______________
+
+leg1 = 1, leg2 = -1
+
+    @pytest.mark.parametrize("leg1,leg2", [
+        (None,1),(1,None),(None,None),(-1,1),(1,-1),(-1,-1),
+        ("2",1),(1,"2"),(True,1),(1,False),(float("nan"),1),(1,float("inf")),
+    ])
+    def test_invalid_or_missing_travel_time_rejected(leg1,leg2):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z")
+        travel = {}
+        if leg1 is not None: travel[("Z","R")] = leg1
+        if leg2 is not None: travel[("R","D")] = leg2
+        result = estimate_eta(order,partner,travel)
+>       assert result["eligible"] is False
+E       assert True is False
+
+tests\test_acceptance_matrix.py:37: AssertionError
+_____________ test_invalid_or_missing_travel_time_rejected[-1--1] _____________
+
+leg1 = -1, leg2 = -1
+
+    @pytest.mark.parametrize("leg1,leg2", [
+        (None,1),(1,None),(None,None),(-1,1),(1,-1),(-1,-1),
+        ("2",1),(1,"2"),(True,1),(1,False),(float("nan"),1),(1,float("inf")),
+    ])
+    def test_invalid_or_missing_travel_time_rejected(leg1,leg2):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z")
+        travel = {}
+        if leg1 is not None: travel[("Z","R")] = leg1
+        if leg2 is not None: travel[("R","D")] = leg2
+        result = estimate_eta(order,partner,travel)
+>       assert result["eligible"] is False
+E       assert True is False
+
+tests\test_acceptance_matrix.py:37: AssertionError
+______________ test_invalid_or_missing_travel_time_rejected[2-1] ______________
+
+leg1 = '2', leg2 = 1
+
+    @pytest.mark.parametrize("leg1,leg2", [
+        (None,1),(1,None),(None,None),(-1,1),(1,-1),(-1,-1),
+        ("2",1),(1,"2"),(True,1),(1,False),(float("nan"),1),(1,float("inf")),
+    ])
+    def test_invalid_or_missing_travel_time_rejected(leg1,leg2):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z")
+        travel = {}
+        if leg1 is not None: travel[("Z","R")] = leg1
+        if leg2 is not None: travel[("R","D")] = leg2
+>       result = estimate_eta(order,partner,travel)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_acceptance_matrix.py:36: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+order = {'order_id': 'O', 'restaurant_id': 'R', 'destination_zone': 'D', 'prep_minutes': 10}
+partner = {'partner_id': 'P', 'zone': 'Z', 'active': True, 'capacity': 2, ...}
+travel = {('Z', 'R'): '2', ('R', 'D'): 1}, now = 0
+
+    def estimate_eta(order, partner, travel, now=0):
+        leg1=travel.get((partner.get('zone'),order.get('restaurant_id')))
+        leg2=travel.get((order.get('restaurant_id'),order.get('destination_zone')))
+        if leg1 is None or leg2 is None:
+            return {'partner_id':partner.get('partner_id'),'eta_minutes':None,'eligible':False}
+>       pickup=now+leg1+partner.get('workload_minutes',0)
+               ^^^^^^^^
+E       TypeError: unsupported operand type(s) for +: 'int' and 'str'
+
+service.py:9: TypeError
+______________ test_invalid_or_missing_travel_time_rejected[1-2] ______________
+
+leg1 = 1, leg2 = '2'
+
+    @pytest.mark.parametrize("leg1,leg2", [
+        (None,1),(1,None),(None,None),(-1,1),(1,-1),(-1,-1),
+        ("2",1),(1,"2"),(True,1),(1,False),(float("nan"),1),(1,float("inf")),
+    ])
+    def test_invalid_or_missing_travel_time_rejected(leg1,leg2):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z")
+        travel = {}
+        if leg1 is not None: travel[("Z","R")] = leg1
+        if leg2 is not None: travel[("R","D")] = leg2
+>       result = estimate_eta(order,partner,travel)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_acceptance_matrix.py:36: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+order = {'order_id': 'O', 'restaurant_id': 'R', 'destination_zone': 'D', 'prep_minutes': 10}
+partner = {'partner_id': 'P', 'zone': 'Z', 'active': True, 'capacity': 2, ...}
+travel = {('Z', 'R'): 1, ('R', 'D'): '2'}, now = 0
+
+    def estimate_eta(order, partner, travel, now=0):
+        leg1=travel.get((partner.get('zone'),order.get('restaurant_id')))
+        leg2=travel.get((order.get('restaurant_id'),order.get('destination_zone')))
+        if leg1 is None or leg2 is None:
+            return {'partner_id':partner.get('partner_id'),'eta_minutes':None,'eligible':False}
+        pickup=now+leg1+partner.get('workload_minutes',0)
+>       return {'partner_id':partner.get('partner_id'),'pickup_minutes':pickup,'eta_minutes':pickup+order.get('prep_minutes',0)+leg2,'eligible':True}
+                                                                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: unsupported operand type(s) for +: 'int' and 'str'
+
+service.py:10: TypeError
+____________ test_invalid_or_missing_travel_time_rejected[True-1] _____________
+
+leg1 = True, leg2 = 1
+
+    @pytest.mark.parametrize("leg1,leg2", [
+        (None,1),(1,None),(None,None),(-1,1),(1,-1),(-1,-1),
+        ("2",1),(1,"2"),(True,1),(1,False),(float("nan"),1),(1,float("inf")),
+    ])
+    def test_invalid_or_missing_travel_time_rejected(leg1,leg2):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z")
+        travel = {}
+        if leg1 is not None: travel[("Z","R")] = leg1
+        if leg2 is not None: travel[("R","D")] = leg2
+        result = estimate_eta(order,partner,travel)
+>       assert result["eligible"] is False
+E       assert True is False
+
+tests\test_acceptance_matrix.py:37: AssertionError
+____________ test_invalid_or_missing_travel_time_rejected[1-False] ____________
+
+leg1 = 1, leg2 = False
+
+    @pytest.mark.parametrize("leg1,leg2", [
+        (None,1),(1,None),(None,None),(-1,1),(1,-1),(-1,-1),
+        ("2",1),(1,"2"),(True,1),(1,False),(float("nan"),1),(1,float("inf")),
+    ])
+    def test_invalid_or_missing_travel_time_rejected(leg1,leg2):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z")
+        travel = {}
+        if leg1 is not None: travel[("Z","R")] = leg1
+        if leg2 is not None: travel[("R","D")] = leg2
+        result = estimate_eta(order,partner,travel)
+>       assert result["eligible"] is False
+E       assert True is False
+
+tests\test_acceptance_matrix.py:37: AssertionError
+_____________ test_invalid_or_missing_travel_time_rejected[nan-1] _____________
+
+leg1 = nan, leg2 = 1
+
+    @pytest.mark.parametrize("leg1,leg2", [
+        (None,1),(1,None),(None,None),(-1,1),(1,-1),(-1,-1),
+        ("2",1),(1,"2"),(True,1),(1,False),(float("nan"),1),(1,float("inf")),
+    ])
+    def test_invalid_or_missing_travel_time_rejected(leg1,leg2):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z")
+        travel = {}
+        if leg1 is not None: travel[("Z","R")] = leg1
+        if leg2 is not None: travel[("R","D")] = leg2
+        result = estimate_eta(order,partner,travel)
+>       assert result["eligible"] is False
+E       assert True is False
+
+tests\test_acceptance_matrix.py:37: AssertionError
+_____________ test_invalid_or_missing_travel_time_rejected[1-inf] _____________
+
+leg1 = 1, leg2 = inf
+
+    @pytest.mark.parametrize("leg1,leg2", [
+        (None,1),(1,None),(None,None),(-1,1),(1,-1),(-1,-1),
+        ("2",1),(1,"2"),(True,1),(1,False),(float("nan"),1),(1,float("inf")),
+    ])
+    def test_invalid_or_missing_travel_time_rejected(leg1,leg2):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z")
+        travel = {}
+        if leg1 is not None: travel[("Z","R")] = leg1
+        if leg2 is not None: travel[("R","D")] = leg2
+        result = estimate_eta(order,partner,travel)
+>       assert result["eligible"] is False
+E       assert True is False
+
+tests\test_acceptance_matrix.py:37: AssertionError
+____________________ test_preparation_time_validation[-1] _____________________
+
+prep = -1
+
+    @pytest.mark.parametrize("prep", [-1,-5,-100,None,"10",True,1.5,float("inf"),float("nan"),0,1,5,10])
+    def test_preparation_time_validation(prep):
+        order = new_order("O","R","D",prep)
+        partner = new_partner("P","Z")
+        result = estimate_eta(order,partner,{("Z","R"):2,("R","D"):3})
+        expected_valid = isinstance(prep,(int,float)) and not isinstance(prep,bool) and prep >= 0 and prep == prep and prep != float("inf")
+>       assert result["eligible"] is bool(expected_valid)
+E       assert True is False
+E        +  where False = bool(False)
+
+tests\test_acceptance_matrix.py:47: AssertionError
+____________________ test_preparation_time_validation[-5] _____________________
+
+prep = -5
+
+    @pytest.mark.parametrize("prep", [-1,-5,-100,None,"10",True,1.5,float("inf"),float("nan"),0,1,5,10])
+    def test_preparation_time_validation(prep):
+        order = new_order("O","R","D",prep)
+        partner = new_partner("P","Z")
+        result = estimate_eta(order,partner,{("Z","R"):2,("R","D"):3})
+        expected_valid = isinstance(prep,(int,float)) and not isinstance(prep,bool) and prep >= 0 and prep == prep and prep != float("inf")
+>       assert result["eligible"] is bool(expected_valid)
+E       assert True is False
+E        +  where False = bool(False)
+
+tests\test_acceptance_matrix.py:47: AssertionError
+___________________ test_preparation_time_validation[-100] ____________________
+
+prep = -100
+
+    @pytest.mark.parametrize("prep", [-1,-5,-100,None,"10",True,1.5,float("inf"),float("nan"),0,1,5,10])
+    def test_preparation_time_validation(prep):
+        order = new_order("O","R","D",prep)
+        partner = new_partner("P","Z")
+        result = estimate_eta(order,partner,{("Z","R"):2,("R","D"):3})
+        expected_valid = isinstance(prep,(int,float)) and not isinstance(prep,bool) and prep >= 0 and prep == prep and prep != float("inf")
+>       assert result["eligible"] is bool(expected_valid)
+E       assert True is False
+E        +  where False = bool(False)
+
+tests\test_acceptance_matrix.py:47: AssertionError
+___________________ test_preparation_time_validation[None] ____________________
+
+prep = None
+
+    @pytest.mark.parametrize("prep", [-1,-5,-100,None,"10",True,1.5,float("inf"),float("nan"),0,1,5,10])
+    def test_preparation_time_validation(prep):
+        order = new_order("O","R","D",prep)
+        partner = new_partner("P","Z")
+>       result = estimate_eta(order,partner,{("Z","R"):2,("R","D"):3})
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_acceptance_matrix.py:45: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+order = {'order_id': 'O', 'restaurant_id': 'R', 'destination_zone': 'D', 'prep_minutes': None}
+partner = {'partner_id': 'P', 'zone': 'Z', 'active': True, 'capacity': 2, ...}
+travel = {('Z', 'R'): 2, ('R', 'D'): 3}, now = 0
+
+    def estimate_eta(order, partner, travel, now=0):
+        leg1=travel.get((partner.get('zone'),order.get('restaurant_id')))
+        leg2=travel.get((order.get('restaurant_id'),order.get('destination_zone')))
+        if leg1 is None or leg2 is None:
+            return {'partner_id':partner.get('partner_id'),'eta_minutes':None,'eligible':False}
+        pickup=now+leg1+partner.get('workload_minutes',0)
+>       return {'partner_id':partner.get('partner_id'),'pickup_minutes':pickup,'eta_minutes':pickup+order.get('prep_minutes',0)+leg2,'eligible':True}
+                                                                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: unsupported operand type(s) for +: 'int' and 'NoneType'
+
+service.py:10: TypeError
+___________________ test_preparation_time_validation[10_0] ____________________
+
+prep = '10'
+
+    @pytest.mark.parametrize("prep", [-1,-5,-100,None,"10",True,1.5,float("inf"),float("nan"),0,1,5,10])
+    def test_preparation_time_validation(prep):
+        order = new_order("O","R","D",prep)
+        partner = new_partner("P","Z")
+>       result = estimate_eta(order,partner,{("Z","R"):2,("R","D"):3})
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_acceptance_matrix.py:45: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+order = {'order_id': 'O', 'restaurant_id': 'R', 'destination_zone': 'D', 'prep_minutes': '10'}
+partner = {'partner_id': 'P', 'zone': 'Z', 'active': True, 'capacity': 2, ...}
+travel = {('Z', 'R'): 2, ('R', 'D'): 3}, now = 0
+
+    def estimate_eta(order, partner, travel, now=0):
+        leg1=travel.get((partner.get('zone'),order.get('restaurant_id')))
+        leg2=travel.get((order.get('restaurant_id'),order.get('destination_zone')))
+        if leg1 is None or leg2 is None:
+            return {'partner_id':partner.get('partner_id'),'eta_minutes':None,'eligible':False}
+        pickup=now+leg1+partner.get('workload_minutes',0)
+>       return {'partner_id':partner.get('partner_id'),'pickup_minutes':pickup,'eta_minutes':pickup+order.get('prep_minutes',0)+leg2,'eligible':True}
+                                                                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: unsupported operand type(s) for +: 'int' and 'str'
+
+service.py:10: TypeError
+___________________ test_preparation_time_validation[True] ____________________
+
+prep = True
+
+    @pytest.mark.parametrize("prep", [-1,-5,-100,None,"10",True,1.5,float("inf"),float("nan"),0,1,5,10])
+    def test_preparation_time_validation(prep):
+        order = new_order("O","R","D",prep)
+        partner = new_partner("P","Z")
+        result = estimate_eta(order,partner,{("Z","R"):2,("R","D"):3})
+        expected_valid = isinstance(prep,(int,float)) and not isinstance(prep,bool) and prep >= 0 and prep == prep and prep != float("inf")
+>       assert result["eligible"] is bool(expected_valid)
+E       assert True is False
+E        +  where False = bool(False)
+
+tests\test_acceptance_matrix.py:47: AssertionError
+____________________ test_preparation_time_validation[inf] ____________________
+
+prep = inf
+
+    @pytest.mark.parametrize("prep", [-1,-5,-100,None,"10",True,1.5,float("inf"),float("nan"),0,1,5,10])
+    def test_preparation_time_validation(prep):
+        order = new_order("O","R","D",prep)
+        partner = new_partner("P","Z")
+        result = estimate_eta(order,partner,{("Z","R"):2,("R","D"):3})
+        expected_valid = isinstance(prep,(int,float)) and not isinstance(prep,bool) and prep >= 0 and prep == prep and prep != float("inf")
+>       assert result["eligible"] is bool(expected_valid)
+E       assert True is False
+E        +  where False = bool(False)
+
+tests\test_acceptance_matrix.py:47: AssertionError
+____________________ test_preparation_time_validation[nan] ____________________
+
+prep = nan
+
+    @pytest.mark.parametrize("prep", [-1,-5,-100,None,"10",True,1.5,float("inf"),float("nan"),0,1,5,10])
+    def test_preparation_time_validation(prep):
+        order = new_order("O","R","D",prep)
+        partner = new_partner("P","Z")
+        result = estimate_eta(order,partner,{("Z","R"):2,("R","D"):3})
+        expected_valid = isinstance(prep,(int,float)) and not isinstance(prep,bool) and prep >= 0 and prep == prep and prep != float("inf")
+>       assert result["eligible"] is bool(expected_valid)
+E       assert True is False
+E        +  where False = bool(False)
+
+tests\test_acceptance_matrix.py:47: AssertionError
+________________ test_inactive_partners_never_selected[False0] ________________
+
+active = False
+
+    @pytest.mark.parametrize("active", [False,False,False,True,True,True,0,1,None,"no","yes"])
+    def test_inactive_partners_never_selected(active):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z")
+        partner["active"] = active
+        result = assign_order(order,[partner],{("Z","R"):1,("R","D"):1})
+        if not active:
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:57: AssertionError
+________________ test_inactive_partners_never_selected[False1] ________________
+
+active = False
+
+    @pytest.mark.parametrize("active", [False,False,False,True,True,True,0,1,None,"no","yes"])
+    def test_inactive_partners_never_selected(active):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z")
+        partner["active"] = active
+        result = assign_order(order,[partner],{("Z","R"):1,("R","D"):1})
+        if not active:
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:57: AssertionError
+________________ test_inactive_partners_never_selected[False2] ________________
+
+active = False
+
+    @pytest.mark.parametrize("active", [False,False,False,True,True,True,0,1,None,"no","yes"])
+    def test_inactive_partners_never_selected(active):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z")
+        partner["active"] = active
+        result = assign_order(order,[partner],{("Z","R"):1,("R","D"):1})
+        if not active:
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:57: AssertionError
+__________________ test_inactive_partners_never_selected[0] ___________________
+
+active = 0
+
+    @pytest.mark.parametrize("active", [False,False,False,True,True,True,0,1,None,"no","yes"])
+    def test_inactive_partners_never_selected(active):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z")
+        partner["active"] = active
+        result = assign_order(order,[partner],{("Z","R"):1,("R","D"):1})
+        if not active:
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:57: AssertionError
+_________________ test_inactive_partners_never_selected[None] _________________
+
+active = None
+
+    @pytest.mark.parametrize("active", [False,False,False,True,True,True,0,1,None,"no","yes"])
+    def test_inactive_partners_never_selected(active):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z")
+        partner["active"] = active
+        result = assign_order(order,[partner],{("Z","R"):1,("R","D"):1})
+        if not active:
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:57: AssertionError
+_____________________ test_capacity_boundary_matrix[1-1] ______________________
+
+capacity = 1, active_count = 1
+
+    @pytest.mark.parametrize("capacity,active_count", [
+        (1,1),(1,2),(2,2),(3,3),(4,4),(5,5),(1,0),(2,0),(2,1),(3,2),
+        (0,0),(-1,0),(True,0),(1.5,0),(None,0),
+    ])
+    def test_capacity_boundary_matrix(capacity,active_count):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z",capacity if isinstance(capacity,int) else 2)
+        partner["capacity"] = capacity
+        partner["active_order_ids"] = [f"OLD{i}" for i in range(active_count)]
+        result = assign_order(order,[partner],{("Z","R"):1,("R","D"):1})
+        valid_capacity = isinstance(capacity,int) and not isinstance(capacity,bool) and capacity >= 1
+        if valid_capacity and active_count < capacity:
+            assert result["partner_id"] == "P"
+        else:
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:76: AssertionError
+_____________________ test_capacity_boundary_matrix[1-2] ______________________
+
+capacity = 1, active_count = 2
+
+    @pytest.mark.parametrize("capacity,active_count", [
+        (1,1),(1,2),(2,2),(3,3),(4,4),(5,5),(1,0),(2,0),(2,1),(3,2),
+        (0,0),(-1,0),(True,0),(1.5,0),(None,0),
+    ])
+    def test_capacity_boundary_matrix(capacity,active_count):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z",capacity if isinstance(capacity,int) else 2)
+        partner["capacity"] = capacity
+        partner["active_order_ids"] = [f"OLD{i}" for i in range(active_count)]
+        result = assign_order(order,[partner],{("Z","R"):1,("R","D"):1})
+        valid_capacity = isinstance(capacity,int) and not isinstance(capacity,bool) and capacity >= 1
+        if valid_capacity and active_count < capacity:
+            assert result["partner_id"] == "P"
+        else:
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:76: AssertionError
+_____________________ test_capacity_boundary_matrix[2-2] ______________________
+
+capacity = 2, active_count = 2
+
+    @pytest.mark.parametrize("capacity,active_count", [
+        (1,1),(1,2),(2,2),(3,3),(4,4),(5,5),(1,0),(2,0),(2,1),(3,2),
+        (0,0),(-1,0),(True,0),(1.5,0),(None,0),
+    ])
+    def test_capacity_boundary_matrix(capacity,active_count):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z",capacity if isinstance(capacity,int) else 2)
+        partner["capacity"] = capacity
+        partner["active_order_ids"] = [f"OLD{i}" for i in range(active_count)]
+        result = assign_order(order,[partner],{("Z","R"):1,("R","D"):1})
+        valid_capacity = isinstance(capacity,int) and not isinstance(capacity,bool) and capacity >= 1
+        if valid_capacity and active_count < capacity:
+            assert result["partner_id"] == "P"
+        else:
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:76: AssertionError
+_____________________ test_capacity_boundary_matrix[3-3] ______________________
+
+capacity = 3, active_count = 3
+
+    @pytest.mark.parametrize("capacity,active_count", [
+        (1,1),(1,2),(2,2),(3,3),(4,4),(5,5),(1,0),(2,0),(2,1),(3,2),
+        (0,0),(-1,0),(True,0),(1.5,0),(None,0),
+    ])
+    def test_capacity_boundary_matrix(capacity,active_count):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z",capacity if isinstance(capacity,int) else 2)
+        partner["capacity"] = capacity
+        partner["active_order_ids"] = [f"OLD{i}" for i in range(active_count)]
+        result = assign_order(order,[partner],{("Z","R"):1,("R","D"):1})
+        valid_capacity = isinstance(capacity,int) and not isinstance(capacity,bool) and capacity >= 1
+        if valid_capacity and active_count < capacity:
+            assert result["partner_id"] == "P"
+        else:
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:76: AssertionError
+_____________________ test_capacity_boundary_matrix[4-4] ______________________
+
+capacity = 4, active_count = 4
+
+    @pytest.mark.parametrize("capacity,active_count", [
+        (1,1),(1,2),(2,2),(3,3),(4,4),(5,5),(1,0),(2,0),(2,1),(3,2),
+        (0,0),(-1,0),(True,0),(1.5,0),(None,0),
+    ])
+    def test_capacity_boundary_matrix(capacity,active_count):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z",capacity if isinstance(capacity,int) else 2)
+        partner["capacity"] = capacity
+        partner["active_order_ids"] = [f"OLD{i}" for i in range(active_count)]
+        result = assign_order(order,[partner],{("Z","R"):1,("R","D"):1})
+        valid_capacity = isinstance(capacity,int) and not isinstance(capacity,bool) and capacity >= 1
+        if valid_capacity and active_count < capacity:
+            assert result["partner_id"] == "P"
+        else:
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:76: AssertionError
+_____________________ test_capacity_boundary_matrix[5-5] ______________________
+
+capacity = 5, active_count = 5
+
+    @pytest.mark.parametrize("capacity,active_count", [
+        (1,1),(1,2),(2,2),(3,3),(4,4),(5,5),(1,0),(2,0),(2,1),(3,2),
+        (0,0),(-1,0),(True,0),(1.5,0),(None,0),
+    ])
+    def test_capacity_boundary_matrix(capacity,active_count):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z",capacity if isinstance(capacity,int) else 2)
+        partner["capacity"] = capacity
+        partner["active_order_ids"] = [f"OLD{i}" for i in range(active_count)]
+        result = assign_order(order,[partner],{("Z","R"):1,("R","D"):1})
+        valid_capacity = isinstance(capacity,int) and not isinstance(capacity,bool) and capacity >= 1
+        if valid_capacity and active_count < capacity:
+            assert result["partner_id"] == "P"
+        else:
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:76: AssertionError
+_____________________ test_capacity_boundary_matrix[0-0] ______________________
+
+capacity = 0, active_count = 0
+
+    @pytest.mark.parametrize("capacity,active_count", [
+        (1,1),(1,2),(2,2),(3,3),(4,4),(5,5),(1,0),(2,0),(2,1),(3,2),
+        (0,0),(-1,0),(True,0),(1.5,0),(None,0),
+    ])
+    def test_capacity_boundary_matrix(capacity,active_count):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z",capacity if isinstance(capacity,int) else 2)
+        partner["capacity"] = capacity
+        partner["active_order_ids"] = [f"OLD{i}" for i in range(active_count)]
+        result = assign_order(order,[partner],{("Z","R"):1,("R","D"):1})
+        valid_capacity = isinstance(capacity,int) and not isinstance(capacity,bool) and capacity >= 1
+        if valid_capacity and active_count < capacity:
+            assert result["partner_id"] == "P"
+        else:
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:76: AssertionError
+_____________________ test_capacity_boundary_matrix[-1-0] _____________________
+
+capacity = -1, active_count = 0
+
+    @pytest.mark.parametrize("capacity,active_count", [
+        (1,1),(1,2),(2,2),(3,3),(4,4),(5,5),(1,0),(2,0),(2,1),(3,2),
+        (0,0),(-1,0),(True,0),(1.5,0),(None,0),
+    ])
+    def test_capacity_boundary_matrix(capacity,active_count):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z",capacity if isinstance(capacity,int) else 2)
+        partner["capacity"] = capacity
+        partner["active_order_ids"] = [f"OLD{i}" for i in range(active_count)]
+        result = assign_order(order,[partner],{("Z","R"):1,("R","D"):1})
+        valid_capacity = isinstance(capacity,int) and not isinstance(capacity,bool) and capacity >= 1
+        if valid_capacity and active_count < capacity:
+            assert result["partner_id"] == "P"
+        else:
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:76: AssertionError
+____________________ test_capacity_boundary_matrix[True-0] ____________________
+
+capacity = True, active_count = 0
+
+    @pytest.mark.parametrize("capacity,active_count", [
+        (1,1),(1,2),(2,2),(3,3),(4,4),(5,5),(1,0),(2,0),(2,1),(3,2),
+        (0,0),(-1,0),(True,0),(1.5,0),(None,0),
+    ])
+    def test_capacity_boundary_matrix(capacity,active_count):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z",capacity if isinstance(capacity,int) else 2)
+        partner["capacity"] = capacity
+        partner["active_order_ids"] = [f"OLD{i}" for i in range(active_count)]
+        result = assign_order(order,[partner],{("Z","R"):1,("R","D"):1})
+        valid_capacity = isinstance(capacity,int) and not isinstance(capacity,bool) and capacity >= 1
+        if valid_capacity and active_count < capacity:
+            assert result["partner_id"] == "P"
+        else:
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:76: AssertionError
+____________________ test_capacity_boundary_matrix[1.5-0] _____________________
+
+capacity = 1.5, active_count = 0
+
+    @pytest.mark.parametrize("capacity,active_count", [
+        (1,1),(1,2),(2,2),(3,3),(4,4),(5,5),(1,0),(2,0),(2,1),(3,2),
+        (0,0),(-1,0),(True,0),(1.5,0),(None,0),
+    ])
+    def test_capacity_boundary_matrix(capacity,active_count):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z",capacity if isinstance(capacity,int) else 2)
+        partner["capacity"] = capacity
+        partner["active_order_ids"] = [f"OLD{i}" for i in range(active_count)]
+        result = assign_order(order,[partner],{("Z","R"):1,("R","D"):1})
+        valid_capacity = isinstance(capacity,int) and not isinstance(capacity,bool) and capacity >= 1
+        if valid_capacity and active_count < capacity:
+            assert result["partner_id"] == "P"
+        else:
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:76: AssertionError
+____________________ test_capacity_boundary_matrix[None-0] ____________________
+
+capacity = None, active_count = 0
+
+    @pytest.mark.parametrize("capacity,active_count", [
+        (1,1),(1,2),(2,2),(3,3),(4,4),(5,5),(1,0),(2,0),(2,1),(3,2),
+        (0,0),(-1,0),(True,0),(1.5,0),(None,0),
+    ])
+    def test_capacity_boundary_matrix(capacity,active_count):
+        order = new_order("O","R","D")
+        partner = new_partner("P","Z",capacity if isinstance(capacity,int) else 2)
+        partner["capacity"] = capacity
+        partner["active_order_ids"] = [f"OLD{i}" for i in range(active_count)]
+        result = assign_order(order,[partner],{("Z","R"):1,("R","D"):1})
+        valid_capacity = isinstance(capacity,int) and not isinstance(capacity,bool) and capacity >= 1
+        if valid_capacity and active_count < capacity:
+            assert result["partner_id"] == "P"
+        else:
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:76: AssertionError
+________ test_duplicate_cancellation_is_idempotent_across_workloads[0] ________
+
+minutes = 0
+
+    @pytest.mark.parametrize("minutes", [0,1,2,3,5,8,10,15,20,30,60,100,250,500,999])
+    def test_duplicate_cancellation_is_idempotent_across_workloads(minutes):
+        partner = new_partner("P","Z")
+        partner.update(active_order_ids=["O"],workload_minutes=minutes,minutes_by_order={"O":minutes})
+        once = process_cancellation(partner,"O","C")
+        twice = process_cancellation(once,"O","C")
+        assert twice["active_order_ids"] == []
+        assert twice["workload_minutes"] == 0
+>       assert twice["processed_cancellation_ids"] == ["C"]
+E       AssertionError: assert ['C', 'C'] == ['C']
+E         
+E         Left contains one more item: 'C'
+E         Use -v to get more diff
+
+tests\test_acceptance_matrix.py:101: AssertionError
+________ test_duplicate_cancellation_is_idempotent_across_workloads[1] ________
+
+minutes = 1
+
+    @pytest.mark.parametrize("minutes", [0,1,2,3,5,8,10,15,20,30,60,100,250,500,999])
+    def test_duplicate_cancellation_is_idempotent_across_workloads(minutes):
+        partner = new_partner("P","Z")
+        partner.update(active_order_ids=["O"],workload_minutes=minutes,minutes_by_order={"O":minutes})
+        once = process_cancellation(partner,"O","C")
+        twice = process_cancellation(once,"O","C")
+        assert twice["active_order_ids"] == []
+        assert twice["workload_minutes"] == 0
+>       assert twice["processed_cancellation_ids"] == ["C"]
+E       AssertionError: assert ['C', 'C'] == ['C']
+E         
+E         Left contains one more item: 'C'
+E         Use -v to get more diff
+
+tests\test_acceptance_matrix.py:101: AssertionError
+________ test_duplicate_cancellation_is_idempotent_across_workloads[2] ________
+
+minutes = 2
+
+    @pytest.mark.parametrize("minutes", [0,1,2,3,5,8,10,15,20,30,60,100,250,500,999])
+    def test_duplicate_cancellation_is_idempotent_across_workloads(minutes):
+        partner = new_partner("P","Z")
+        partner.update(active_order_ids=["O"],workload_minutes=minutes,minutes_by_order={"O":minutes})
+        once = process_cancellation(partner,"O","C")
+        twice = process_cancellation(once,"O","C")
+        assert twice["active_order_ids"] == []
+        assert twice["workload_minutes"] == 0
+>       assert twice["processed_cancellation_ids"] == ["C"]
+E       AssertionError: assert ['C', 'C'] == ['C']
+E         
+E         Left contains one more item: 'C'
+E         Use -v to get more diff
+
+tests\test_acceptance_matrix.py:101: AssertionError
+________ test_duplicate_cancellation_is_idempotent_across_workloads[3] ________
+
+minutes = 3
+
+    @pytest.mark.parametrize("minutes", [0,1,2,3,5,8,10,15,20,30,60,100,250,500,999])
+    def test_duplicate_cancellation_is_idempotent_across_workloads(minutes):
+        partner = new_partner("P","Z")
+        partner.update(active_order_ids=["O"],workload_minutes=minutes,minutes_by_order={"O":minutes})
+        once = process_cancellation(partner,"O","C")
+        twice = process_cancellation(once,"O","C")
+        assert twice["active_order_ids"] == []
+        assert twice["workload_minutes"] == 0
+>       assert twice["processed_cancellation_ids"] == ["C"]
+E       AssertionError: assert ['C', 'C'] == ['C']
+E         
+E         Left contains one more item: 'C'
+E         Use -v to get more diff
+
+tests\test_acceptance_matrix.py:101: AssertionError
+________ test_duplicate_cancellation_is_idempotent_across_workloads[5] ________
+
+minutes = 5
+
+    @pytest.mark.parametrize("minutes", [0,1,2,3,5,8,10,15,20,30,60,100,250,500,999])
+    def test_duplicate_cancellation_is_idempotent_across_workloads(minutes):
+        partner = new_partner("P","Z")
+        partner.update(active_order_ids=["O"],workload_minutes=minutes,minutes_by_order={"O":minutes})
+        once = process_cancellation(partner,"O","C")
+        twice = process_cancellation(once,"O","C")
+        assert twice["active_order_ids"] == []
+        assert twice["workload_minutes"] == 0
+>       assert twice["processed_cancellation_ids"] == ["C"]
+E       AssertionError: assert ['C', 'C'] == ['C']
+E         
+E         Left contains one more item: 'C'
+E         Use -v to get more diff
+
+tests\test_acceptance_matrix.py:101: AssertionError
+________ test_duplicate_cancellation_is_idempotent_across_workloads[8] ________
+
+minutes = 8
+
+    @pytest.mark.parametrize("minutes", [0,1,2,3,5,8,10,15,20,30,60,100,250,500,999])
+    def test_duplicate_cancellation_is_idempotent_across_workloads(minutes):
+        partner = new_partner("P","Z")
+        partner.update(active_order_ids=["O"],workload_minutes=minutes,minutes_by_order={"O":minutes})
+        once = process_cancellation(partner,"O","C")
+        twice = process_cancellation(once,"O","C")
+        assert twice["active_order_ids"] == []
+        assert twice["workload_minutes"] == 0
+>       assert twice["processed_cancellation_ids"] == ["C"]
+E       AssertionError: assert ['C', 'C'] == ['C']
+E         
+E         Left contains one more item: 'C'
+E         Use -v to get more diff
+
+tests\test_acceptance_matrix.py:101: AssertionError
+_______ test_duplicate_cancellation_is_idempotent_across_workloads[10] ________
+
+minutes = 10
+
+    @pytest.mark.parametrize("minutes", [0,1,2,3,5,8,10,15,20,30,60,100,250,500,999])
+    def test_duplicate_cancellation_is_idempotent_across_workloads(minutes):
+        partner = new_partner("P","Z")
+        partner.update(active_order_ids=["O"],workload_minutes=minutes,minutes_by_order={"O":minutes})
+        once = process_cancellation(partner,"O","C")
+        twice = process_cancellation(once,"O","C")
+        assert twice["active_order_ids"] == []
+        assert twice["workload_minutes"] == 0
+>       assert twice["processed_cancellation_ids"] == ["C"]
+E       AssertionError: assert ['C', 'C'] == ['C']
+E         
+E         Left contains one more item: 'C'
+E         Use -v to get more diff
+
+tests\test_acceptance_matrix.py:101: AssertionError
+_______ test_duplicate_cancellation_is_idempotent_across_workloads[15] ________
+
+minutes = 15
+
+    @pytest.mark.parametrize("minutes", [0,1,2,3,5,8,10,15,20,30,60,100,250,500,999])
+    def test_duplicate_cancellation_is_idempotent_across_workloads(minutes):
+        partner = new_partner("P","Z")
+        partner.update(active_order_ids=["O"],workload_minutes=minutes,minutes_by_order={"O":minutes})
+        once = process_cancellation(partner,"O","C")
+        twice = process_cancellation(once,"O","C")
+        assert twice["active_order_ids"] == []
+        assert twice["workload_minutes"] == 0
+>       assert twice["processed_cancellation_ids"] == ["C"]
+E       AssertionError: assert ['C', 'C'] == ['C']
+E         
+E         Left contains one more item: 'C'
+E         Use -v to get more diff
+
+tests\test_acceptance_matrix.py:101: AssertionError
+_______ test_duplicate_cancellation_is_idempotent_across_workloads[20] ________
+
+minutes = 20
+
+    @pytest.mark.parametrize("minutes", [0,1,2,3,5,8,10,15,20,30,60,100,250,500,999])
+    def test_duplicate_cancellation_is_idempotent_across_workloads(minutes):
+        partner = new_partner("P","Z")
+        partner.update(active_order_ids=["O"],workload_minutes=minutes,minutes_by_order={"O":minutes})
+        once = process_cancellation(partner,"O","C")
+        twice = process_cancellation(once,"O","C")
+        assert twice["active_order_ids"] == []
+        assert twice["workload_minutes"] == 0
+>       assert twice["processed_cancellation_ids"] == ["C"]
+E       AssertionError: assert ['C', 'C'] == ['C']
+E         
+E         Left contains one more item: 'C'
+E         Use -v to get more diff
+
+tests\test_acceptance_matrix.py:101: AssertionError
+_______ test_duplicate_cancellation_is_idempotent_across_workloads[30] ________
+
+minutes = 30
+
+    @pytest.mark.parametrize("minutes", [0,1,2,3,5,8,10,15,20,30,60,100,250,500,999])
+    def test_duplicate_cancellation_is_idempotent_across_workloads(minutes):
+        partner = new_partner("P","Z")
+        partner.update(active_order_ids=["O"],workload_minutes=minutes,minutes_by_order={"O":minutes})
+        once = process_cancellation(partner,"O","C")
+        twice = process_cancellation(once,"O","C")
+        assert twice["active_order_ids"] == []
+        assert twice["workload_minutes"] == 0
+>       assert twice["processed_cancellation_ids"] == ["C"]
+E       AssertionError: assert ['C', 'C'] == ['C']
+E         
+E         Left contains one more item: 'C'
+E         Use -v to get more diff
+
+tests\test_acceptance_matrix.py:101: AssertionError
+_______ test_duplicate_cancellation_is_idempotent_across_workloads[60] ________
+
+minutes = 60
+
+    @pytest.mark.parametrize("minutes", [0,1,2,3,5,8,10,15,20,30,60,100,250,500,999])
+    def test_duplicate_cancellation_is_idempotent_across_workloads(minutes):
+        partner = new_partner("P","Z")
+        partner.update(active_order_ids=["O"],workload_minutes=minutes,minutes_by_order={"O":minutes})
+        once = process_cancellation(partner,"O","C")
+        twice = process_cancellation(once,"O","C")
+        assert twice["active_order_ids"] == []
+        assert twice["workload_minutes"] == 0
+>       assert twice["processed_cancellation_ids"] == ["C"]
+E       AssertionError: assert ['C', 'C'] == ['C']
+E         
+E         Left contains one more item: 'C'
+E         Use -v to get more diff
+
+tests\test_acceptance_matrix.py:101: AssertionError
+_______ test_duplicate_cancellation_is_idempotent_across_workloads[100] _______
+
+minutes = 100
+
+    @pytest.mark.parametrize("minutes", [0,1,2,3,5,8,10,15,20,30,60,100,250,500,999])
+    def test_duplicate_cancellation_is_idempotent_across_workloads(minutes):
+        partner = new_partner("P","Z")
+        partner.update(active_order_ids=["O"],workload_minutes=minutes,minutes_by_order={"O":minutes})
+        once = process_cancellation(partner,"O","C")
+        twice = process_cancellation(once,"O","C")
+        assert twice["active_order_ids"] == []
+        assert twice["workload_minutes"] == 0
+>       assert twice["processed_cancellation_ids"] == ["C"]
+E       AssertionError: assert ['C', 'C'] == ['C']
+E         
+E         Left contains one more item: 'C'
+E         Use -v to get more diff
+
+tests\test_acceptance_matrix.py:101: AssertionError
+_______ test_duplicate_cancellation_is_idempotent_across_workloads[250] _______
+
+minutes = 250
+
+    @pytest.mark.parametrize("minutes", [0,1,2,3,5,8,10,15,20,30,60,100,250,500,999])
+    def test_duplicate_cancellation_is_idempotent_across_workloads(minutes):
+        partner = new_partner("P","Z")
+        partner.update(active_order_ids=["O"],workload_minutes=minutes,minutes_by_order={"O":minutes})
+        once = process_cancellation(partner,"O","C")
+        twice = process_cancellation(once,"O","C")
+        assert twice["active_order_ids"] == []
+        assert twice["workload_minutes"] == 0
+>       assert twice["processed_cancellation_ids"] == ["C"]
+E       AssertionError: assert ['C', 'C'] == ['C']
+E         
+E         Left contains one more item: 'C'
+E         Use -v to get more diff
+
+tests\test_acceptance_matrix.py:101: AssertionError
+_______ test_duplicate_cancellation_is_idempotent_across_workloads[500] _______
+
+minutes = 500
+
+    @pytest.mark.parametrize("minutes", [0,1,2,3,5,8,10,15,20,30,60,100,250,500,999])
+    def test_duplicate_cancellation_is_idempotent_across_workloads(minutes):
+        partner = new_partner("P","Z")
+        partner.update(active_order_ids=["O"],workload_minutes=minutes,minutes_by_order={"O":minutes})
+        once = process_cancellation(partner,"O","C")
+        twice = process_cancellation(once,"O","C")
+        assert twice["active_order_ids"] == []
+        assert twice["workload_minutes"] == 0
+>       assert twice["processed_cancellation_ids"] == ["C"]
+E       AssertionError: assert ['C', 'C'] == ['C']
+E         
+E         Left contains one more item: 'C'
+E         Use -v to get more diff
+
+tests\test_acceptance_matrix.py:101: AssertionError
+_______ test_duplicate_cancellation_is_idempotent_across_workloads[999] _______
+
+minutes = 999
+
+    @pytest.mark.parametrize("minutes", [0,1,2,3,5,8,10,15,20,30,60,100,250,500,999])
+    def test_duplicate_cancellation_is_idempotent_across_workloads(minutes):
+        partner = new_partner("P","Z")
+        partner.update(active_order_ids=["O"],workload_minutes=minutes,minutes_by_order={"O":minutes})
+        once = process_cancellation(partner,"O","C")
+        twice = process_cancellation(once,"O","C")
+        assert twice["active_order_ids"] == []
+        assert twice["workload_minutes"] == 0
+>       assert twice["processed_cancellation_ids"] == ["C"]
+E       AssertionError: assert ['C', 'C'] == ['C']
+E         
+E         Left contains one more item: 'C'
+E         Use -v to get more diff
+
+tests\test_acceptance_matrix.py:101: AssertionError
+______________________ test_current_time_validation[-1] _______________________
+
+now = -1
+
+    @pytest.mark.parametrize("now", [0,1,2,5,10,60,100,1000,-1,-10,"5",True,None])
+    def test_current_time_validation(now):
+        result = estimate_eta(new_order("O","R","D"),new_partner("P","Z"),{("Z","R"):1,("R","D"):1},now)
+        if isinstance(now,(int,float)) and not isinstance(now,bool) and now >= 0:
+            assert result["eligible"] is True
+        else:
+>           assert result["eligible"] is False
+E           assert True is False
+
+tests\test_acceptance_matrix.py:129: AssertionError
+______________________ test_current_time_validation[-10] ______________________
+
+now = -10
+
+    @pytest.mark.parametrize("now", [0,1,2,5,10,60,100,1000,-1,-10,"5",True,None])
+    def test_current_time_validation(now):
+        result = estimate_eta(new_order("O","R","D"),new_partner("P","Z"),{("Z","R"):1,("R","D"):1},now)
+        if isinstance(now,(int,float)) and not isinstance(now,bool) and now >= 0:
+            assert result["eligible"] is True
+        else:
+>           assert result["eligible"] is False
+E           assert True is False
+
+tests\test_acceptance_matrix.py:129: AssertionError
+______________________ test_current_time_validation[5_1] ______________________
+
+now = '5'
+
+    @pytest.mark.parametrize("now", [0,1,2,5,10,60,100,1000,-1,-10,"5",True,None])
+    def test_current_time_validation(now):
+>       result = estimate_eta(new_order("O","R","D"),new_partner("P","Z"),{("Z","R"):1,("R","D"):1},now)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_acceptance_matrix.py:125: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+order = {'order_id': 'O', 'restaurant_id': 'R', 'destination_zone': 'D', 'prep_minutes': 10}
+partner = {'partner_id': 'P', 'zone': 'Z', 'active': True, 'capacity': 2, ...}
+travel = {('Z', 'R'): 1, ('R', 'D'): 1}, now = '5'
+
+    def estimate_eta(order, partner, travel, now=0):
+        leg1=travel.get((partner.get('zone'),order.get('restaurant_id')))
+        leg2=travel.get((order.get('restaurant_id'),order.get('destination_zone')))
+        if leg1 is None or leg2 is None:
+            return {'partner_id':partner.get('partner_id'),'eta_minutes':None,'eligible':False}
+>       pickup=now+leg1+partner.get('workload_minutes',0)
+               ^^^^^^^^
+E       TypeError: can only concatenate str (not "int") to str
+
+service.py:9: TypeError
+_____________________ test_current_time_validation[True] ______________________
+
+now = True
+
+    @pytest.mark.parametrize("now", [0,1,2,5,10,60,100,1000,-1,-10,"5",True,None])
+    def test_current_time_validation(now):
+        result = estimate_eta(new_order("O","R","D"),new_partner("P","Z"),{("Z","R"):1,("R","D"):1},now)
+        if isinstance(now,(int,float)) and not isinstance(now,bool) and now >= 0:
+            assert result["eligible"] is True
+        else:
+>           assert result["eligible"] is False
+E           assert True is False
+
+tests\test_acceptance_matrix.py:129: AssertionError
+_____________________ test_current_time_validation[None] ______________________
+
+now = None
+
+    @pytest.mark.parametrize("now", [0,1,2,5,10,60,100,1000,-1,-10,"5",True,None])
+    def test_current_time_validation(now):
+>       result = estimate_eta(new_order("O","R","D"),new_partner("P","Z"),{("Z","R"):1,("R","D"):1},now)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_acceptance_matrix.py:125: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+order = {'order_id': 'O', 'restaurant_id': 'R', 'destination_zone': 'D', 'prep_minutes': 10}
+partner = {'partner_id': 'P', 'zone': 'Z', 'active': True, 'capacity': 2, ...}
+travel = {('Z', 'R'): 1, ('R', 'D'): 1}, now = None
+
+    def estimate_eta(order, partner, travel, now=0):
+        leg1=travel.get((partner.get('zone'),order.get('restaurant_id')))
+        leg2=travel.get((order.get('restaurant_id'),order.get('destination_zone')))
+        if leg1 is None or leg2 is None:
+            return {'partner_id':partner.get('partner_id'),'eta_minutes':None,'eligible':False}
+>       pickup=now+leg1+partner.get('workload_minutes',0)
+               ^^^^^^^^
+E       TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+service.py:9: TypeError
+_________ test_invalid_order_fields_do_not_assign_partner[order_id-] __________
+
+field = 'order_id', value = ''
+
+    @pytest.mark.parametrize("field,value", [
+        ("order_id",""),("order_id",None),("restaurant_id",""),("restaurant_id",None),
+        ("destination_zone",""),("destination_zone",None),("order_id",0),("restaurant_id",0),
+        ("destination_zone",0),("prep_minutes",-1),("prep_minutes",None),
+        ("prep_minutes","2"),("prep_minutes",True),("prep_minutes",float("nan")),
+    ])
+    def test_invalid_order_fields_do_not_assign_partner(field,value):
+        order = new_order("O","R","D")
+        order[field] = value
+        result = assign_order(order,[new_partner("P","Z")],{("Z","R"):1,("R","D"):1})
+        if field in ("order_id","restaurant_id","destination_zone") or field == "prep_minutes":
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:143: AssertionError
+_______ test_invalid_order_fields_do_not_assign_partner[order_id-None] ________
+
+field = 'order_id', value = None
+
+    @pytest.mark.parametrize("field,value", [
+        ("order_id",""),("order_id",None),("restaurant_id",""),("restaurant_id",None),
+        ("destination_zone",""),("destination_zone",None),("order_id",0),("restaurant_id",0),
+        ("destination_zone",0),("prep_minutes",-1),("prep_minutes",None),
+        ("prep_minutes","2"),("prep_minutes",True),("prep_minutes",float("nan")),
+    ])
+    def test_invalid_order_fields_do_not_assign_partner(field,value):
+        order = new_order("O","R","D")
+        order[field] = value
+        result = assign_order(order,[new_partner("P","Z")],{("Z","R"):1,("R","D"):1})
+        if field in ("order_id","restaurant_id","destination_zone") or field == "prep_minutes":
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:143: AssertionError
+_________ test_invalid_order_fields_do_not_assign_partner[order_id-0] _________
+
+field = 'order_id', value = 0
+
+    @pytest.mark.parametrize("field,value", [
+        ("order_id",""),("order_id",None),("restaurant_id",""),("restaurant_id",None),
+        ("destination_zone",""),("destination_zone",None),("order_id",0),("restaurant_id",0),
+        ("destination_zone",0),("prep_minutes",-1),("prep_minutes",None),
+        ("prep_minutes","2"),("prep_minutes",True),("prep_minutes",float("nan")),
+    ])
+    def test_invalid_order_fields_do_not_assign_partner(field,value):
+        order = new_order("O","R","D")
+        order[field] = value
+        result = assign_order(order,[new_partner("P","Z")],{("Z","R"):1,("R","D"):1})
+        if field in ("order_id","restaurant_id","destination_zone") or field == "prep_minutes":
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:143: AssertionError
+______ test_invalid_order_fields_do_not_assign_partner[prep_minutes--1] _______
+
+field = 'prep_minutes', value = -1
+
+    @pytest.mark.parametrize("field,value", [
+        ("order_id",""),("order_id",None),("restaurant_id",""),("restaurant_id",None),
+        ("destination_zone",""),("destination_zone",None),("order_id",0),("restaurant_id",0),
+        ("destination_zone",0),("prep_minutes",-1),("prep_minutes",None),
+        ("prep_minutes","2"),("prep_minutes",True),("prep_minutes",float("nan")),
+    ])
+    def test_invalid_order_fields_do_not_assign_partner(field,value):
+        order = new_order("O","R","D")
+        order[field] = value
+        result = assign_order(order,[new_partner("P","Z")],{("Z","R"):1,("R","D"):1})
+        if field in ("order_id","restaurant_id","destination_zone") or field == "prep_minutes":
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:143: AssertionError
+_____ test_invalid_order_fields_do_not_assign_partner[prep_minutes-None] ______
+
+field = 'prep_minutes', value = None
+
+    @pytest.mark.parametrize("field,value", [
+        ("order_id",""),("order_id",None),("restaurant_id",""),("restaurant_id",None),
+        ("destination_zone",""),("destination_zone",None),("order_id",0),("restaurant_id",0),
+        ("destination_zone",0),("prep_minutes",-1),("prep_minutes",None),
+        ("prep_minutes","2"),("prep_minutes",True),("prep_minutes",float("nan")),
+    ])
+    def test_invalid_order_fields_do_not_assign_partner(field,value):
+        order = new_order("O","R","D")
+        order[field] = value
+>       result = assign_order(order,[new_partner("P","Z")],{("Z","R"):1,("R","D"):1})
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_acceptance_matrix.py:141: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+service.py:17: in assign_order
+    estimate=estimate_eta(order,partner,travel,now)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+order = {'order_id': 'O', 'restaurant_id': 'R', 'destination_zone': 'D', 'prep_minutes': None}
+partner = {'partner_id': 'P', 'zone': 'Z', 'active': True, 'capacity': 2, ...}
+travel = {('Z', 'R'): 1, ('R', 'D'): 1}, now = 0
+
+    def estimate_eta(order, partner, travel, now=0):
+        leg1=travel.get((partner.get('zone'),order.get('restaurant_id')))
+        leg2=travel.get((order.get('restaurant_id'),order.get('destination_zone')))
+        if leg1 is None or leg2 is None:
+            return {'partner_id':partner.get('partner_id'),'eta_minutes':None,'eligible':False}
+        pickup=now+leg1+partner.get('workload_minutes',0)
+>       return {'partner_id':partner.get('partner_id'),'pickup_minutes':pickup,'eta_minutes':pickup+order.get('prep_minutes',0)+leg2,'eligible':True}
+                                                                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: unsupported operand type(s) for +: 'int' and 'NoneType'
+
+service.py:10: TypeError
+_______ test_invalid_order_fields_do_not_assign_partner[prep_minutes-2] _______
+
+field = 'prep_minutes', value = '2'
+
+    @pytest.mark.parametrize("field,value", [
+        ("order_id",""),("order_id",None),("restaurant_id",""),("restaurant_id",None),
+        ("destination_zone",""),("destination_zone",None),("order_id",0),("restaurant_id",0),
+        ("destination_zone",0),("prep_minutes",-1),("prep_minutes",None),
+        ("prep_minutes","2"),("prep_minutes",True),("prep_minutes",float("nan")),
+    ])
+    def test_invalid_order_fields_do_not_assign_partner(field,value):
+        order = new_order("O","R","D")
+        order[field] = value
+>       result = assign_order(order,[new_partner("P","Z")],{("Z","R"):1,("R","D"):1})
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_acceptance_matrix.py:141: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+service.py:17: in assign_order
+    estimate=estimate_eta(order,partner,travel,now)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+order = {'order_id': 'O', 'restaurant_id': 'R', 'destination_zone': 'D', 'prep_minutes': '2'}
+partner = {'partner_id': 'P', 'zone': 'Z', 'active': True, 'capacity': 2, ...}
+travel = {('Z', 'R'): 1, ('R', 'D'): 1}, now = 0
+
+    def estimate_eta(order, partner, travel, now=0):
+        leg1=travel.get((partner.get('zone'),order.get('restaurant_id')))
+        leg2=travel.get((order.get('restaurant_id'),order.get('destination_zone')))
+        if leg1 is None or leg2 is None:
+            return {'partner_id':partner.get('partner_id'),'eta_minutes':None,'eligible':False}
+        pickup=now+leg1+partner.get('workload_minutes',0)
+>       return {'partner_id':partner.get('partner_id'),'pickup_minutes':pickup,'eta_minutes':pickup+order.get('prep_minutes',0)+leg2,'eligible':True}
+                                                                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: unsupported operand type(s) for +: 'int' and 'str'
+
+service.py:10: TypeError
+_____ test_invalid_order_fields_do_not_assign_partner[prep_minutes-True] ______
+
+field = 'prep_minutes', value = True
+
+    @pytest.mark.parametrize("field,value", [
+        ("order_id",""),("order_id",None),("restaurant_id",""),("restaurant_id",None),
+        ("destination_zone",""),("destination_zone",None),("order_id",0),("restaurant_id",0),
+        ("destination_zone",0),("prep_minutes",-1),("prep_minutes",None),
+        ("prep_minutes","2"),("prep_minutes",True),("prep_minutes",float("nan")),
+    ])
+    def test_invalid_order_fields_do_not_assign_partner(field,value):
+        order = new_order("O","R","D")
+        order[field] = value
+        result = assign_order(order,[new_partner("P","Z")],{("Z","R"):1,("R","D"):1})
+        if field in ("order_id","restaurant_id","destination_zone") or field == "prep_minutes":
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:143: AssertionError
+______ test_invalid_order_fields_do_not_assign_partner[prep_minutes-nan] ______
+
+field = 'prep_minutes', value = nan
+
+    @pytest.mark.parametrize("field,value", [
+        ("order_id",""),("order_id",None),("restaurant_id",""),("restaurant_id",None),
+        ("destination_zone",""),("destination_zone",None),("order_id",0),("restaurant_id",0),
+        ("destination_zone",0),("prep_minutes",-1),("prep_minutes",None),
+        ("prep_minutes","2"),("prep_minutes",True),("prep_minutes",float("nan")),
+    ])
+    def test_invalid_order_fields_do_not_assign_partner(field,value):
+        order = new_order("O","R","D")
+        order[field] = value
+        result = assign_order(order,[new_partner("P","Z")],{("Z","R"):1,("R","D"):1})
+        if field in ("order_id","restaurant_id","destination_zone") or field == "prep_minutes":
+>           assert result["partner_id"] is None
+E           AssertionError: assert 'P' is None
+
+tests\test_acceptance_matrix.py:143: AssertionError
+_____________________ test_inactive_partner_not_assigned ______________________
+
+    def test_inactive_partner_not_assigned():
+        o=new_order('O','R','D'); p=new_partner('P','Z'); p['active']=False
+>       assert assign_order(o,[p],{('Z','R'):1,('R','D'):1})['partner_id'] is None
+E       AssertionError: assert 'P' is None
+
+tests\test_contract.py:17: AssertionError
+_______________________ test_full_partner_not_assigned ________________________
+
+    def test_full_partner_not_assigned():
+        o=new_order('O','R','D'); p=new_partner('P','Z',1); p['active_order_ids']=['A']
+>       assert assign_order(o,[p],{('Z','R'):1,('R','D'):1})['partner_id'] is None
+E       AssertionError: assert 'P' is None
+
+tests\test_contract.py:22: AssertionError
+_____________________ test_negative_prep_time_is_rejected _____________________
+
+    def test_negative_prep_time_is_rejected():
+        o=new_order('O','R','D',-5); p=new_partner('P','Z')
+>       assert assign_order(o,[p],{('Z','R'):1,('R','D'):1})['partner_id'] is None
+E       AssertionError: assert 'P' is None
+
+tests\test_contract.py:39: AssertionError
+__________________ test_duplicate_cancellation_is_idempotent __________________
+
+    def test_duplicate_cancellation_is_idempotent():
+        p=new_partner('P','Z'); p.update(active_order_ids=['O1'],workload_minutes=9,minutes_by_order={'O1':9})
+        once=process_cancellation(p,'O1','C1'); twice=process_cancellation(once,'O1','C1')
+>       assert twice['workload_minutes']==0 and twice['processed_cancellation_ids']==['C1']
+E       AssertionError: assert (0 == 0 and ['C1', 'C1'] == ['C1']
+E         
+E         Left contains one more item: 'C1'
+E         Use -v to get more diff)
+
+tests\test_contract.py:50: AssertionError
+============================== warnings summary ===============================
+C:\Users\yashr\AppData\Local\Programs\Python\Python314\Lib\site-packages\anyio\pytest_plugin.py:14
+  C:\Users\yashr\AppData\Local\Programs\Python\Python314\Lib\site-packages\anyio\pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_acceptance_matrix.py::test_invalid_or_missing_travel_time_rejected[-1-1]
+FAILED tests/test_acceptance_matrix.py::test_invalid_or_missing_travel_time_rejected[1--1]
+FAILED tests/test_acceptance_matrix.py::test_invalid_or_missing_travel_time_rejected[-1--1]
+FAILED tests/test_acceptance_matrix.py::test_invalid_or_missing_travel_time_rejected[2-1]
+FAILED tests/test_acceptance_matrix.py::test_invalid_or_missing_travel_time_rejected[1-2]
+FAILED tests/test_acceptance_matrix.py::test_invalid_or_missing_travel_time_rejected[True-1]
+FAILED tests/test_acceptance_matrix.py::test_invalid_or_missing_travel_time_rejected[1-False]
+FAILED tests/test_acceptance_matrix.py::test_invalid_or_missing_travel_time_rejected[nan-1]
+FAILED tests/test_acceptance_matrix.py::test_invalid_or_missing_travel_time_rejected[1-inf]
+FAILED tests/test_acceptance_matrix.py::test_preparation_time_validation[-1]
+FAILED tests/test_acceptance_matrix.py::test_preparation_time_validation[-5]
+FAILED tests/test_acceptance_matrix.py::test_preparation_time_validation[-100]
+FAILED tests/test_acceptance_matrix.py::test_preparation_time_validation[None]
+FAILED tests/test_acceptance_matrix.py::test_preparation_time_validation[10_0]
+FAILED tests/test_acceptance_matrix.py::test_preparation_time_validation[True]
+FAILED tests/test_acceptance_matrix.py::test_preparation_time_validation[inf]
+FAILED tests/test_acceptance_matrix.py::test_preparation_time_validation[nan]
+FAILED tests/test_acceptance_matrix.py::test_inactive_partners_never_selected[False0]
+FAILED tests/test_acceptance_matrix.py::test_inactive_partners_never_selected[False1]
+FAILED tests/test_acceptance_matrix.py::test_inactive_partners_never_selected[False2]
+FAILED tests/test_acceptance_matrix.py::test_inactive_partners_never_selected[0]
+FAILED tests/test_acceptance_matrix.py::test_inactive_partners_never_selected[None]
+FAILED tests/test_acceptance_matrix.py::test_capacity_boundary_matrix[1-1] - ...
+FAILED tests/test_acceptance_matrix.py::test_capacity_boundary_matrix[1-2] - ...
+FAILED tests/test_acceptance_matrix.py::test_capacity_boundary_matrix[2-2] - ...
+FAILED tests/test_acceptance_matrix.py::test_capacity_boundary_matrix[3-3] - ...
+FAILED tests/test_acceptance_matrix.py::test_capacity_boundary_matrix[4-4] - ...
+FAILED tests/test_acceptance_matrix.py::test_capacity_boundary_matrix[5-5] - ...
+FAILED tests/test_acceptance_matrix.py::test_capacity_boundary_matrix[0-0] - ...
+FAILED tests/test_acceptance_matrix.py::test_capacity_boundary_matrix[-1-0]
+FAILED tests/test_acceptance_matrix.py::test_capacity_boundary_matrix[True-0]
+FAILED tests/test_acceptance_matrix.py::test_capacity_boundary_matrix[1.5-0]
+FAILED tests/test_acceptance_matrix.py::test_capacity_boundary_matrix[None-0]
+FAILED tests/test_acceptance_matrix.py::test_duplicate_cancellation_is_idempotent_across_workloads[0]
+FAILED tests/test_acceptance_matrix.py::test_duplicate_cancellation_is_idempotent_across_workloads[1]
+FAILED tests/test_acceptance_matrix.py::test_duplicate_cancellation_is_idempotent_across_workloads[2]
+FAILED tests/test_acceptance_matrix.py::test_duplicate_cancellation_is_idempotent_across_workloads[3]
+FAILED tests/test_acceptance_matrix.py::test_duplicate_cancellation_is_idempotent_across_workloads[5]
+FAILED tests/test_acceptance_matrix.py::test_duplicate_cancellation_is_idempotent_across_workloads[8]
+FAILED tests/test_acceptance_matrix.py::test_duplicate_cancellation_is_idempotent_across_workloads[10]
+FAILED tests/test_acceptance_matrix.py::test_duplicate_cancellation_is_idempotent_across_workloads[15]
+FAILED tests/test_acceptance_matrix.py::test_duplicate_cancellation_is_idempotent_across_workloads[20]
+FAILED tests/test_acceptance_matrix.py::test_duplicate_cancellation_is_idempotent_across_workloads[30]
+FAILED tests/test_acceptance_matrix.py::test_duplicate_cancellation_is_idempotent_across_workloads[60]
+FAILED tests/test_acceptance_matrix.py::test_duplicate_cancellation_is_idempotent_across_workloads[100]
+FAILED tests/test_acceptance_matrix.py::test_duplicate_cancellation_is_idempotent_across_workloads[250]
+FAILED tests/test_acceptance_matrix.py::test_duplicate_cancellation_is_idempotent_across_workloads[500]
+FAILED tests/test_acceptance_matrix.py::test_duplicate_cancellation_is_idempotent_across_workloads[999]
+FAILED tests/test_acceptance_matrix.py::test_current_time_validation[-1] - as...
+FAILED tests/test_acceptance_matrix.py::test_current_time_validation[-10] - a...
+FAILED tests/test_acceptance_matrix.py::test_current_time_validation[5_1] - T...
+FAILED tests/test_acceptance_matrix.py::test_current_time_validation[True] - ...
+FAILED tests/test_acceptance_matrix.py::test_current_time_validation[None] - ...
+FAILED tests/test_acceptance_matrix.py::test_invalid_order_fields_do_not_assign_partner[order_id-]
+FAILED tests/test_acceptance_matrix.py::test_invalid_order_fields_do_not_assign_partner[order_id-None]
+FAILED tests/test_acceptance_matrix.py::test_invalid_order_fields_do_not_assign_partner[order_id-0]
+FAILED tests/test_acceptance_matrix.py::test_invalid_order_fields_do_not_assign_partner[prep_minutes--1]
+FAILED tests/test_acceptance_matrix.py::test_invalid_order_fields_do_not_assign_partner[prep_minutes-None]
+FAILED tests/test_acceptance_matrix.py::test_invalid_order_fields_do_not_assign_partner[prep_minutes-2]
+FAILED tests/test_acceptance_matrix.py::test_invalid_order_fields_do_not_assign_partner[prep_minutes-True]
+FAILED tests/test_acceptance_matrix.py::test_invalid_order_fields_do_not_assign_partner[prep_minutes-nan]
+FAILED tests/test_contract.py::test_inactive_partner_not_assigned - Assertion...
+FAILED tests/test_contract.py::test_full_partner_not_assigned - AssertionErro...
+FAILED tests/test_contract.py::test_negative_prep_time_is_rejected - Assertio...
+FAILED tests/test_contract.py::test_duplicate_cancellation_is_idempotent - As...
+65 failed, 164 passed, 1 warning in 1.02s
