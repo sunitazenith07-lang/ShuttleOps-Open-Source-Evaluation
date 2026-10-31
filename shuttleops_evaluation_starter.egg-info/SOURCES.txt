@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+shuttleops_evaluation_starter.egg-info/PKG-INFO
+shuttleops_evaluation_starter.egg-info/SOURCES.txt
+shuttleops_evaluation_starter.egg-info/dependency_links.txt
+shuttleops_evaluation_starter.egg-info/top_level.txt
+tests/test_acceptance_matrix.py
+tests/test_contract.py
+tests/test_edge_cases.py
