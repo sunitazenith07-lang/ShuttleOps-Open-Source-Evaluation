@@ -1,7 +1,6 @@
 from copy import deepcopy
 
 def is_valid_time(t):
-    """Helper to validate time variables are valid numbers >= 0, rejecting bools, None, strings, NaNs, and inf."""
     return isinstance(t, (int, float)) and not isinstance(t, bool) and t >= 0 and t == t and t != float('inf')
 
 def estimate_eta(order, partner, travel, now=0):
@@ -31,7 +30,6 @@ def assign_order(order, partners, travel, now=0):
             continue
         
         capacity = partner.get('capacity', 0)
-        # Strict capacity validation: must be integer, not boolean, and >= 1
         if not (isinstance(capacity, int) and not isinstance(capacity, bool) and capacity >= 1):
             continue
             
