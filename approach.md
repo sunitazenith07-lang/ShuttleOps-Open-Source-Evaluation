@@ -28,8 +28,8 @@
   - **Planned fix:** Check `processed_cancellation_ids` before applying a cancellation. If the event ID has already been processed, return an unchanged copy; otherwise release the order/workload and record the event once.
 
 ## 4. Implementation decisions
-- **Main changes and why:** No implementation changes have been made in this review. The fixes listed above are the proposed changes indicated by the starter code and failing acceptance tests.
-- **Alternatives considered and why rejected:** No alternatives have been implemented or experimentally compared. The proposed approach validates inputs at the ETA boundary and filters candidates before selection so invalid data does not enter the comparison.
+- **Main changes and why:** Implemented input validation, partner eligibility checks, ETA calculation, deterministic partner selection, and duplicate cancellation protection.
+- **Alternatives considered and why rejected:** Time values are finite, non-negative minutes. Partners must be active and below valid capacity. Cancellation event IDs are unique.
 - **Assumptions:** Time values are expressed in minutes. A partner is available only when `active is True` and the number of active orders is below a valid positive-integer capacity. Cancellation event IDs identify unique events.
 
 ## 5. Verification
@@ -42,5 +42,5 @@
 
 ## 1. Finally after making changes.
 - **Commands run after editing:** `pytest -q` and `python main.py`.
-- **Initial test result:** `229 passed in 0.44s` (189 test cases).
+- **Final test result:** `229 passed in 0.44s`
 - **Demo/output observed:** `python main.py` returned `{'order_id': 'O-7', 'partner_id': 'P-2', 'pickup_minutes': 13, 'eta_minutes': 35, 'reason': 'assigned'}`.
