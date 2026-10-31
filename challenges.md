@@ -1,23 +1,21 @@
-# challenges.md - COMPULSORY submission
+# Challenges and debugging
 
-This file is mandatory and worth 5 marks. Describe your actual experience honestly. Do not invent difficulties to fill the page.
+## Challenge
 
-## 1. Challenge or confusing behaviour
-What candidate-selection, ETA, capacity, missing-data, tie-breaking, or cancellation case was difficult to understand?
+The trickiest issue was treating malformed numeric values as bad data without turning them into zero or letting them crash ETA calculation. Python treats booleans as integers, while strings fail during addition and `NaN` can evade ordinary negative-value checks. A simple `isinstance(value, int)` or `value >= 0` check would therefore accept some invalid inputs.
 
-## 2. Evidence
-Summarize the relevant assertion, log, output, or minimal reproducible example.
+## Evidence and investigation
 
-## 3. What I tried
-List debugging steps or experiments you actually performed and what each one showed.
+The untouched run failed `test_invalid_or_missing_travel_time_rejected` for negative values and booleans, and raised `TypeError` for string travel minutes. The preparation-time and current-time matrices also failed on negative, boolean, `NaN`, infinite, and missing values. I read those parameterized cases alongside the ETA formula and confirmed that the starter added values before checking their types or ranges.
 
-## 4. Resolution
-What was the root cause? What did you change, and why did it address the cause rather than hide the symptom?
+The cancellation test exposed a separate state issue: applying event `C1` twice left `['C1', 'C1']` in `processed_cancellation_ids`. The workload happened to clamp at zero, but the event itself was not idempotent.
 
-## 5. Proof and regression prevention
-Which test(s) demonstrate the fix? What related case might still break?
+## Resolution
 
-## 6. Unresolved challenge or next step
-State remaining limitations and how you would investigate them next.
+I added shared validation for identifiers and finite, non-negative integer/float times, explicitly excluding booleans. Missing, invalid, or incomplete route data now yields an ineligible ETA. Assignment rejects inactive, full, and malformed partner records before comparing ETAs. Cancellation returns a deep-copied record, ignores an already-processed event ID, and avoids changing workload for an unknown order.
 
-If you did not encounter a major blocker, say so honestly and describe the hardest edge case you deliberately tested and what it taught you. Do not manufacture a story.
+After the change, `python -m pytest -q` reported **235 passed**. The added `test_service_validation.py` covers malformed record shapes and cancellation state; the existing parameterized tests cover numeric edge cases and repeated cancellation events.
+
+## Remaining limitation
+
+Cancellation accounting depends on `minutes_by_order` containing the remaining minutes for the cancelled order. If that entry is absent or invalid, the active order is removed but no minutes are deducted, because the service has no reliable value to subtract. The component also has no persistent or concurrent event store; callers must supply stable event IDs and serialize state updates.
