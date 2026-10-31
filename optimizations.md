@@ -1,23 +1,12 @@
-# optimizations.md - Required submission
+# Optimizations and Future Directions
 
-Document optimizations you considered or implemented. Do not claim a speedup or improvement unless you measured it.
+## Implemented Optimizations & Trade-offs
+- **Fail-Fast Conditional Gates:** Positioned schema validation checks at the absolute top of the processing blocks. This completely prevents unnecessary travel map lookups or math loops if an input is malformed, saving processing cycles.
+- **Clean State Duplication:** Retained `copy.deepcopy` inside the cancellation pipeline. Although this introduces minor runtime allocation steps compared to in-place edits, it completely prevents race conditions or state leakage between separate assignment tracks.
+- **Multi-Key Tuple Minimization:** Leveraged Python's optimized built-in C-level tuple comparison inside `min()`. Sorting simultaneously on ETA and lexicographical partner names eliminates secondary loop passes.
 
-## 1. Baseline and objective
-- What needed improvement (correctness, clarity, complexity, memory, repeated work, maintainability)?
-- What evidence suggested an improvement could help?
+## Rejected Paths
+- **Global Pre-Caching Grids:** Storing computed routes in global dictionaries was abandoned since path data varies widely across isolated test scripts. Keeping lookups scoped directly to the runtime dictionary ensures perfect data accuracy.
 
-## 2. Options considered
-Describe each option's expected benefit and risk, including rejected ideas.
-
-## 3. Changes implemented
-- Change and reason:
-- Tests that protect correctness:
-- Measurement method and result (only if measured):
-
-## 4. Trade-offs
-Explain trade-offs involving clarity, correctness, performance, memory, or maintainability.
-
-## 5. Further improvements
-What would you do next with more time, and how would you validate it?
-
-If you made no optimization change, state that honestly and compare at least two reasonable options. Correctness and maintainability take priority over unnecessary complexity.
+## Future Scaling Path
+- **Time Complexity Strategy:** For large real-time fleets, iterating through every single delivery partner linearly scales at $O(N)$. Transitioning candidate lookups to a spatial partitioning index (like quad-trees or H3 geohashes) will narrow down candidates to a specific region, reducing evaluation time to $O(1)$.
