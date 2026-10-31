@@ -12,28 +12,16 @@
 - Partner ID: P-2
 - Current zone: Z-1
 - Remaining workload: 5 minutes
-- Travel time (Partner → Restaurant): 8 minutes
-- Travel time (Restaurant → Customer): 12 minutes
+- Partner-to-restaurant travel time: 8 minutes
+- Restaurant-to-customer travel time: 12 minutes
 
 **ETA calculation:**
 
 Pickup Time = 8 + 5 = 13 minutes
 
-ETA = 13 + 10 + 12 = 35 minutes
+ETA = 13 + 10 + 12 = **35 minutes**
 
-**Actual result:**
-
-```python
-{
-    'order_id': 'O-7',
-    'partner_id': 'P-2',
-    'pickup_minutes': 13,
-    'eta_minutes': 35,
-    'reason': 'assigned'
-}
-```
-
-The service successfully assigns the order to P-2 with an ETA of 35 minutes.
+**Actual result:** P-2 was assigned successfully with a pickup time of 13 minutes and an ETA of 35 minutes.
 
 ## 2. No-eligible-partner example
 
@@ -41,7 +29,7 @@ The service successfully assigns the order to P-2 with an ETA of 35 minutes.
 
 Two candidate partners are considered:
 
-- **P-1:** Excluded because its capacity is reached.
+- **P-1:** Rejected because it has reached its maximum capacity.
 - **P-2:** Rejected because restaurant-to-customer travel-time data is missing.
 
 **Actual result:**
@@ -55,31 +43,31 @@ Two candidate partners are considered:
 }
 ```
 
-The order remains unassigned because neither partner has valid assignment eligibility.
+The order remains unassigned because no candidate has valid eligibility and travel-time information.
 
 ## 3. Three edge cases
 
 ### 1. Missing travel-time data
-- **Input:** Required restaurant-to-customer travel time is missing.
+- **Input:** Required travel-time route is missing.
 - **Expected:** Reject the candidate instead of assuming zero travel time.
-- **Actual:** Candidate rejected; no reliable ETA calculated.
-- **Test:** Missing travel data rejected.
+- **Actual:** Candidate rejected; ETA remains None.
+- **Test:** `test_unassigned_reason_is_returned_when_all_candidates_lack_travel_data`
 
-### 2. Partner at full capacity
-- **Input:** Partner has reached its maximum capacity.
-- **Expected:** Partner must not receive another order.
-- **Actual:** Partner excluded from assignment.
-- **Test:** Full capacity excluded.
-
-### 3. Duplicate cancellation event
-- **Input:** Same cancellation event is processed twice.
+### 2. Duplicate cancellation event
+- **Input:** Same order cancellation event is processed twice.
 - **Expected:** Workload must be deducted only once.
-- **Actual:** Workload decreases from 15 to 5 minutes on the first cancellation and remains 5 minutes on the duplicate.
-- **Test:** Duplicate cancellation deducted once.
+- **Actual:** Workload is deducted once; subsequent processing does not deduct it again.
+- **Test:** `test_duplicate_cancellation_is_idempotent`
+
+### 3. Unknown order cancellation
+- **Input:** Cancellation requested for an order not present in the partner's active orders.
+- **Expected:** Cancellation must not be processed or recorded.
+- **Actual:** Active orders, workload and processed cancellation IDs remain unchanged.
+- **Test:** `test_unknown_cancellation_does_not_record_event`
 
 ## 4. Assumptions and limitations
 
 - **Tie-breaking:** Lowest ETA wins. Equal ETAs are resolved using partner ID in ascending order.
-- **Workload accounting:** Existing workload is included in pickup-time calculation. Cancellation releases workload associated with the cancelled order.
-- **Cancellation idempotency:** Previously processed cancellation event IDs prevent duplicate workload deductions.
-- **Limitations:** Unknown order cancellation events can still be recorded as processed. Assignment itself does not update partner workload or active orders; that requires a separate state-management operation.
+- **Workload accounting:** Existing workload is included in pickup-time calculation. Cancellation releases the workload recorded for that order.
+- **Cancellation idempotency:** Previously processed event IDs prevent duplicate deductions. Unknown orders are rejected without recording their event IDs.
+- **Limitations:** Assignment selection does not automatically update partner workload or active orders. A separate state-management operation is required to commit assignments.
